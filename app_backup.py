@@ -1,34 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-from datetime import date, timedelta
-
-from utils.constants import (
-    SUPPORTED_CURRENCIES,
-    EXPENSE_CATEGORIES,
-    DEFAULT_INSIGHT_MESSAGE
-)
-
-from utils.calculations import (
-    calculate_trip_duration,
-    calculate_current_day,
-    calculate_trip_progress,
-    calculate_remaining_budget
-)
-
-from services.forecasting_service import (
-    generate_forecast
-)
-
-from services.database_service import (
-    create_database,
-    add_expense,
-    get_all_expenses,
-    get_total_spent,
-    get_transaction_count,
-    get_category_summary,
-    get_highest_spending_category
-)
+from datetime import date
 
 from utils.constants import (
     SUPPORTED_CURRENCIES,
@@ -61,7 +34,16 @@ st.write(
     "An AI-powered travel companion for expense tracking, budgeting, and travel finance insights."
 )
 
-create_database()
+# =========================
+# Session State
+# =========================
+
+if "expenses" not in st.session_state:
+    st.session_state.expenses = []
+
+# =========================
+# Trip Details
+# =========================
 
 st.header("🌍 Trip Details")
 
@@ -97,9 +79,8 @@ with col2:
     )
 
     trip_end_date = st.date_input(
-    "Trip End Date",
-    value=date.today() + timedelta(days=7)
-
+        "Trip End Date",
+        value=date.today()
     )
 
 # =========================
@@ -159,18 +140,18 @@ if st.button("Add Expense"):
 
     if expense_amount > 0:
 
-        add_expense(
-            category=expense_category,
-            amount=expense_amount,
-            currency=expense_currency,
-            description=expense_description
+        st.session_state.expenses.append(
+            {
+                "Category": expense_category,
+                "Amount": expense_amount,
+                "Currency": expense_currency,
+                "Description": expense_description
+            }
         )
 
         st.success(
             "Expense added successfully!"
         )
-
-        st.rerun()
 
     else:
 
@@ -178,20 +159,21 @@ if st.button("Add Expense"):
             "Please enter a valid amount."
         )
 
-
 # =========================
 # Dashboard Calculations
 # =========================
 
-expense_df = get_all_expenses()
+total_spent = sum(
+    expense["Amount"]
+    for expense in st.session_state.expenses
+)
 
-total_spent = get_total_spent()
+remaining_budget = (
+    budget - total_spent
+)
 
-transaction_count = get_transaction_count()
-
-remaining_budget = calculate_remaining_budget(
-    budget,
-    total_spent
+transaction_count = len(
+    st.session_state.expenses
 )
 
 forecast = generate_forecast(
@@ -213,26 +195,26 @@ col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Trip Progress",
-        f"{forecast['trip_progress_percent']}%"
+        "Budget",
+        f"{home_currency} {budget:,.0f}"
     )
 
 with col2:
     st.metric(
-        "Budget Used",
-        f"{forecast['budget_used_percent']}%"
+        "Spent",
+        f"{home_currency} {total_spent:,.0f}"
     )
 
 with col3:
     st.metric(
-        "Projected Spend",
-        f"{home_currency} {forecast['projected_total_spend']:,.0f}"
+        "Remaining",
+        f"{home_currency} {remaining_budget:,.0f}"
     )
 
 with col4:
     st.metric(
-        "Status",
-        forecast["status"]
+        "Current Day",
+        f"{current_day}/{trip_duration}"
     )
 
 # =========================
@@ -277,7 +259,7 @@ if (
 
     insight = (
         f"You are currently on Day {current_day} "
-        f"of {trip_duration} days in your trip to {destination}.\n\n"
+        f"of your trip to {destination}.\n\n"
         f"You have spent "
         f"{forecast['budget_used_percent']}% "
         f"of your budget while completing "
@@ -317,7 +299,7 @@ else:
 # Spending Analysis
 # =========================
 
-if not expense_df.empty:
+if st.session_state.expenses:
 
     expense_df = pd.DataFrame(
         st.session_state.expenses
@@ -327,7 +309,16 @@ if not expense_df.empty:
 
     st.header("📈 Spending Analysis")
 
-    category_summary = get_category_summary()
+    category_summary = (
+        expense_df
+        .groupby("Category")["Amount"]
+        .sum()
+        .reset_index()
+        .sort_values(
+            by="Amount",
+            ascending=False
+        )
+    )
 
     st.subheader(
         "Category Breakdown"
@@ -338,8 +329,12 @@ if not expense_df.empty:
         use_container_width=True
     )
 
-    highest_category, highest_amount = (
-    get_highest_spending_category()
+    highest_category = (
+        category_summary.iloc[0]["Category"]
+    )
+
+    highest_amount = (
+        category_summary.iloc[0]["Amount"]
     )
 
     st.success(
@@ -370,7 +365,7 @@ st.divider()
 
 st.header("📋 Expense History")
 
-if not expense_df.empty:
+if st.session_state.expenses:
 
     expense_df = pd.DataFrame(
         st.session_state.expenses
