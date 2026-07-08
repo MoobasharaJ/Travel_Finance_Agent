@@ -1,142 +1,123 @@
 """
-Utility functions for deterministic calculations.
+Pure calculation utilities.
 
-This module contains reusable calculation
-functions used across the Travel Finance Agent.
+These functions perform only mathematical calculations.
+No database operations.
+No API calls.
+No AI.
 """
 
 from datetime import date
 
 
-def calculate_trip_duration(
-    start_date,
-    end_date
-):
+def calculate_total_pre_trip_expenses(expenses: list[float]) -> float:
     """
-    Calculate total trip duration in days.
+    Calculate total pre-trip expenses.
     """
-
-    return (
-        end_date - start_date
-    ).days + 1
+    return round(sum(expenses), 2)
 
 
-def calculate_current_day(
-    start_date,
-    end_date
-):
+def calculate_travel_budget(total_budget: float, pre_trip_expenses: float) -> float:
     """
-    Calculate which day of the trip
-    the traveler is currently on.
+    Travel Budget = Total Budget - Pre-trip Expenses
     """
-
-    today = date.today()
-
-    trip_duration = (
-        end_date - start_date
-    ).days + 1
-
-    if today < start_date:
-        return 0
-
-    if today > end_date:
-        return trip_duration
-
-    return (
-        today - start_date
-    ).days + 1
+    return round(total_budget - pre_trip_expenses, 2)
 
 
-def calculate_trip_progress(
-    current_day,
-    trip_duration
-):
+def calculate_total_expenses(expenses: list[float]) -> float:
     """
-    Calculate trip completion percentage.
+    Calculate total trip expenses.
     """
+    return round(sum(expenses), 2)
 
+
+def calculate_remaining_budget(travel_budget: float, total_expenses: float) -> float:
+    """
+    Remaining budget during the trip.
+    """
+    return round(travel_budget - total_expenses, 2)
+
+
+def calculate_trip_duration(start_date: date, end_date: date) -> int:
+    """
+    Returns total trip duration in days.
+    """
+    return (end_date - start_date).days + 1
+
+
+def calculate_days_elapsed(start_date: date, current_date: date) -> int:
+    """
+    Returns days completed in the trip.
+    """
+    elapsed = (current_date - start_date).days + 1
+    return max(elapsed, 0)
+
+
+def calculate_days_remaining(end_date: date, current_date: date) -> int:
+    """
+    Returns remaining trip days.
+    """
+    remaining = (end_date - current_date).days
+    return max(remaining, 0)
+
+
+def calculate_daily_average(total_expenses: float, days_elapsed: int) -> float:
+    """
+    Average daily spending.
+    """
+    if days_elapsed <= 0:
+        return 0.0
+
+    return round(total_expenses / days_elapsed, 2)
+
+
+def calculate_daily_allowance(remaining_budget: float, days_remaining: int) -> float:
+    """
+    Safe daily spending for the remaining trip.
+    """
+    if days_remaining <= 0:
+        return 0.0
+
+    return round(remaining_budget / days_remaining, 2)
+
+
+def calculate_trip_progress(days_elapsed: int, trip_duration: int) -> float:
+    """
+    Trip completion percentage.
+    """
     if trip_duration <= 0:
-        return 0
+        return 0.0
 
-    return round(
-        (current_day / trip_duration) * 100,
-        2
-    )
+    return round((days_elapsed / trip_duration) * 100, 2)
 
 
-def calculate_budget_used(
-    total_spent,
-    budget
-):
+def calculate_burn_rate(total_expenses: float, travel_budget: float) -> float:
     """
-    Calculate percentage of budget used.
+    Percentage of travel budget already spent.
     """
+    if travel_budget <= 0:
+        return 0.0
 
-    if budget <= 0:
-        return 0
-
-    return round(
-        (total_spent / budget) * 100,
-        2
-    )
+    return round((total_expenses / travel_budget) * 100, 2)
 
 
-def calculate_remaining_budget(
-    budget,
-    total_spent
-):
+def calculate_category_breakdown(expenses: dict) -> dict:
     """
-    Calculate remaining budget.
+    Returns category-wise spending percentage.
+
+    Example Input:
+    {
+        "Food": 5000,
+        "Hotel": 12000,
+        "Transport": 3000
+    }
     """
+    total = sum(expenses.values())
 
-    return budget - total_spent
+    if total == 0:
+        return {category: 0 for category in expenses}
 
-
-def calculate_average_daily_spend(
-    total_spent,
-    current_day
-):
-    """
-    Calculate average daily spending.
-    """
-
-    if current_day <= 0:
-        return 0
-
-    return round(
-        total_spent / current_day,
-        2
-    )
-
-
-def calculate_projected_spend(
-    average_daily_spend,
-    trip_duration
-):
-    """
-    Estimate total spending by
-    the end of the trip.
-    """
-
-    return round(
-        average_daily_spend * trip_duration,
-        2
-    )
-
-
-def calculate_projected_difference(
-    budget,
-    projected_spend
-):
-    """
-    Positive value:
-        Budget remaining
-
-    Negative value:
-        Overspending
-    """
-
-    return round(
-        budget - projected_spend,
-        2
-    )
+    return {
+        category: round((amount / total) * 100, 2)
+        for category, amount in expenses.items()
+    }

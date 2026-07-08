@@ -1,189 +1,149 @@
 """
 Currency Service
 
-Handles:
+Responsible for:
 - Destination currency lookup
 - Live exchange rates
+- Historical exchange rates
 - Currency conversion
-- Exchange rate insights
+- Forex trend analysis
+
+No database.
+No AI.
+No business logic.
 """
 
-from typing import Dict, Optional
+from datetime import datetime, timedelta
 
 import requests
 
 from utils.constants import (
-    DESTINATION_TO_CURRENCY,
-    EXCHANGE_RATE_BASE_URL
+    SUPPORTED_DESTINATIONS,
+    HOME_CURRENCY,
+    LIVE_FOREX_API_URL,
+    HISTORICAL_FOREX_API_URL,
 )
 
 
-def get_currency_for_destination(
-    destination: str
-) -> Optional[str]:
-    """
-    Return currency code for the selected destination.
+class CurrencyService:
 
-    Example:
-        Japan -> JPY
-        France -> EUR
+    # ======================================================
+    # Destination
+    # ======================================================
 
-    Returns:
-        str | None
-    """
+    def get_currency(self, destination):
+        """Return currency code for a destination."""
+        return SUPPORTED_DESTINATIONS.get(destination)
 
-    return DESTINATION_TO_CURRENCY.get(
-        destination
-    )
+    # ======================================================
+    # Live Exchange Rate
+    # ======================================================
 
-
-def get_exchange_rates(
-    base_currency: str = "INR"
-) -> Dict:
-    """
-    Fetch live exchange rates for a base currency.
-
-    Returns:
-        dict of exchange rates
-
-    Example:
-        {
-            "USD": 0.012,
-            "JPY": 1.73,
-            ...
-        }
-    """
-
-    try:
-
-        url = (
-            f"{EXCHANGE_RATE_BASE_URL}/"
-            f"{base_currency}"
-        )
+    def get_live_exchange_rate(self, currency):
+        """
+        Returns INR -> Destination exchange rate.
+        """
 
         response = requests.get(
-            url,
-            timeout=10
+            f"{LIVE_FOREX_API_URL}/{HOME_CURRENCY}"
         )
 
         response.raise_for_status()
 
         data = response.json()
 
-        if data.get("result") == "success":
+        return {
+            "base_currency": HOME_CURRENCY,
+            "target_currency": currency,
+            "exchange_rate": data["rates"][currency]
+        }
 
-            return data.get(
-                "rates",
-                {}
-            )
+    # ======================================================
+    # Currency Conversion
+    # ======================================================
 
-        return {}
+    def convert_currency(self, amount, exchange_rate):
+        """
+        Convert INR into destination currency.
+        """
+        return round(amount * exchange_rate, 2)
+    
+    def convert_to_inr(amount, exchange_rate):
 
-    except Exception as e:
+       return round(amount / exchange_rate, 2)
 
-        print(
-            f"Exchange rate fetch error: {e}"
+    # ======================================================
+    # Historical Rates
+    # ======================================================
+
+    def get_historical_rates(self, currency, days=30):
+        """
+        Returns historical INR -> destination currency rates.
+        """
+
+        end_date = datetime.today().date()
+        start_date = end_date - timedelta(days=days)
+
+        url = (
+            f"{HISTORICAL_FOREX_API_URL}/"
+            f"{start_date}..{end_date}"
+            f"?from={HOME_CURRENCY}"
+            f"&to={currency}"
         )
 
-        return {}
+        response = requests.get(url)
 
+        response.raise_for_status()
 
-def get_live_exchange_rate(
-    base_currency: str,
-    target_currency: str
-) -> Optional[float]:
-    """
-    Get live exchange rate between two currencies.
+        data = response.json()
 
-    Example:
-        INR -> JPY
-        returns 1.73
-    """
+        rates = []
 
-    rates = get_exchange_rates(
-        base_currency
-    )
+        for date, value in data["rates"].items():
+            rates.append({
+                "date": date,
+                "rate": value[currency]
+            })
 
-    return rates.get(
-        target_currency
-    )
+        return rates
 
+    # ======================================================
+    # Trend Analysis
+    # ======================================================
 
-def convert_currency(
-    amount: float,
-    base_currency: str,
-    target_currency: str
-) -> Optional[float]:
-    """
-    Convert amount from one currency
-    to another.
+    def analyze_trend(self, rates):
+        """
+        Analyze historical forex trend.
+        """
 
-    Example:
-        1000 INR -> JPY
-    """
+        if not rates:
+            return None
 
-    rate = get_live_exchange_rate(
-        base_currency,
-        target_currency
-    )
+        values = [item["rate"] for item in rates]
 
-    if rate is None:
+        current_rate = values[-1]
 
-        return None
+        first_rate = values[0]
 
-    return round(
-        amount * rate,
-        2
-    )
+        moving_average = round(sum(values) / len(values), 4)
 
-
-def convert_inr_to_destination(
-    amount_inr: float,
-    destination_currency: str
-) -> Optional[float]:
-    """
-    Convert INR to destination currency.
-    """
-
-    return convert_currency(
-        amount_inr,
-        "INR",
-        destination_currency
-    )
-
-
-def convert_destination_to_inr(
-    amount: float,
-    source_currency: str
-) -> Optional[float]:
-    """
-    Convert destination currency to INR.
-    """
-
-    return convert_currency(
-        amount,
-        source_currency,
-        "INR"
-    )
-
-
-def generate_exchange_rate_insight(
-    rate: Optional[float],
-    destination_currency: str
-) -> str:
-    """
-    Generate exchange-rate insight
-    for dashboard display.
-    """
-
-    if rate is None:
-
-        return (
-            "Unable to fetch live "
-            "exchange rate data."
+        percentage_change = round(
+            ((current_rate - first_rate) / first_rate) * 100,
+            2
         )
 
-    return (
-        f"1 INR = {rate:.4f} "
-        f"{destination_currency}"
-    )
+        if percentage_change > 0.5:
+            trend = "Up"
+
+        elif percentage_change < -0.5:
+            trend = "Down"
+
+        else:
+            trend = "Stable"
+
+        return {
+            "current_rate": current_rate,
+            "moving_average": moving_average,
+            "percentage_change": percentage_change,
+            "trend": trend
+        }

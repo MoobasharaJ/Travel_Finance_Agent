@@ -1,199 +1,299 @@
 """
 SQLite Database Service
 
-Handles:
-- Database creation
-- Expense insertion
-- Expense retrieval
-- Category summaries
+Responsible for:
+- Creating database tables
+- CRUD operations for trips
+- CRUD operations for pre-trip expenses
+- CRUD operations for daily expenses
+
+No calculations.
+No AI.
+No business logic.
 """
 
 import sqlite3
-import pandas as pd
+from datetime import datetime
 
-from utils.constants import DATABASE_NAME
-
-
-def get_connection():
-    """
-    Create database connection.
-    """
-
-    return sqlite3.connect(DATABASE_NAME)
+from utils.constants import DATABASE_PATH
 
 
-def create_database():
-    """
-    Create expenses table if it doesn't exist.
-    """
+class DatabaseService:
+    def __init__(self):
+        self.conn = sqlite3.connect(DATABASE_PATH)
+        self.conn.row_factory = sqlite3.Row
+        self.cursor = self.conn.cursor()
 
-    conn = get_connection()
+        self.create_tables()
 
-    cursor = conn.cursor()
+    # ==========================================================
+    # Create Tables
+    # ==========================================================
 
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS expenses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            category TEXT NOT NULL,
-            amount REAL NOT NULL,
-            currency TEXT NOT NULL,
-            description TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    def create_tables(self):
+        """Create all required tables if they don't exist."""
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS trips (
+                trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                destination TEXT NOT NULL,
+                currency TEXT NOT NULL,
+                start_date TEXT NOT NULL,
+                end_date TEXT NOT NULL,
+                duration INTEGER NOT NULL,
+                total_budget REAL NOT NULL,
+                travel_budget REAL NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS pre_trip_expenses (
+                expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trip_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                amount REAL NOT NULL,
+                notes TEXT,
+                FOREIGN KEY (trip_id) REFERENCES trips(trip_id)
+            )
+        """)
+
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS expenses (
+                expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                trip_id INTEGER NOT NULL,
+                date TEXT NOT NULL,
+                category TEXT NOT NULL,
+                amount REAL NOT NULL,
+                notes TEXT,
+                FOREIGN KEY (trip_id) REFERENCES trips(trip_id)
+            )
+        """)
+
+        self.conn.commit()
+
+    # ==========================================================
+    # Trip Methods
+    # ==========================================================
+
+    def create_trip(
+        self,
+        destination,
+        currency,
+        start_date,
+        end_date,
+        duration,
+        total_budget,
+        travel_budget,
+    ):
+        """Create a new trip."""
+
+        self.cursor.execute("""
+            INSERT INTO trips (
+                destination,
+                currency,
+                start_date,
+                end_date,
+                duration,
+                total_budget,
+                travel_budget,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            destination,
+            currency,
+            start_date,
+            end_date,
+            duration,
+            total_budget,
+            travel_budget,
+            datetime.now().isoformat()
+        ))
+
+        self.conn.commit()
+
+        return self.cursor.lastrowid
+
+    def get_trip(self, trip_id):
+        """Return a single trip."""
+
+        self.cursor.execute(
+            "SELECT * FROM trips WHERE trip_id = ?",
+            (trip_id,)
         )
-        """
-    )
 
-    conn.commit()
-    conn.close()
+        row = self.cursor.fetchone()
 
+        return dict(row) if row else None
 
-def add_expense(
-    category,
-    amount,
-    currency,
-    description=""
-):
-    """
-    Insert expense into database.
-    """
+    def update_trip(self, trip_id, travel_budget):
+        """Update travel budget."""
 
-    conn = get_connection()
+        self.cursor.execute("""
+            UPDATE trips
+            SET travel_budget = ?
+            WHERE trip_id = ?
+        """, (travel_budget, trip_id))
 
-    cursor = conn.cursor()
+        self.conn.commit()
 
-    cursor.execute(
-        """
-        INSERT INTO expenses
-        (
+    # ==========================================================
+    # Pre-Trip Expense Methods
+    # ==========================================================
+
+    def save_pre_trip_expense(
+        self,
+        trip_id,
+        category,
+        amount,
+        notes=""
+    ):
+        """Save a pre-trip expense."""
+
+        self.cursor.execute("""
+            INSERT INTO pre_trip_expenses (
+                trip_id,
+                category,
+                amount,
+                notes
+            )
+            VALUES (?, ?, ?, ?)
+        """, (
+            trip_id,
             category,
             amount,
-            currency,
-            description
-        )
-        VALUES (?, ?, ?, ?)
-        """,
-        (
+            notes
+        ))
+
+        self.conn.commit()
+
+    def get_pre_trip_expenses(self, trip_id):
+        """Return all pre-trip expenses."""
+
+        self.cursor.execute("""
+            SELECT *
+            FROM pre_trip_expenses
+            WHERE trip_id = ?
+        """, (trip_id,))
+
+        rows = self.cursor.fetchall()
+
+        return [dict(row) for row in rows]
+
+    # ==========================================================
+    # Daily Expense Methods
+    # ==========================================================
+
+    def save_expense(
+        self,
+        trip_id,
+        date,
+        category,
+        amount,
+        notes=""
+    ):
+        """Save a daily expense."""
+
+        self.cursor.execute("""
+            INSERT INTO expenses (
+                trip_id,
+                date,
+                category,
+                amount,
+                notes
+            )
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            trip_id,
+            date,
             category,
             amount,
-            currency,
-            description
-        )
-    )
+            notes
+        ))
 
-    conn.commit()
-    conn.close()
+        self.conn.commit()
+
+    def get_expenses(self, trip_id):
+        """Return all expenses for a trip."""
+
+        self.cursor.execute("""
+            SELECT *
+            FROM expenses
+            WHERE trip_id = ?
+            ORDER BY date ASC
+        """, (trip_id,))
+
+        rows = self.cursor.fetchall()
+
+        return [dict(row) for row in rows]
+
+    def delete_expense(self, expense_id):
+        """Delete an expense."""
+
+        self.cursor.execute("""
+            DELETE FROM expenses
+            WHERE expense_id = ?
+        """, (expense_id,))
+
+        self.conn.commit()
+
+    def get_total_pre_trip_expense(self, trip_id):
+       """
+        Return total pre-trip expenses.
+       """
+
+       self.cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM pre_trip_expenses
+        WHERE trip_id = ?
+        """, (trip_id,))
+
+       row = self.cursor.fetchone()
+
+       return row["total"]
 
 
-def get_all_expenses():
-    """
-    Return all expenses.
-    """
-
-    conn = get_connection()
-
-    query = """
-    SELECT *
-    FROM expenses
-    ORDER BY created_at DESC
-    """
-
-    df = pd.read_sql_query(
-        query,
-        conn
-    )
-
-    conn.close()
-
-    return df
-
-
-def get_total_spent():
-    """
-    Calculate total spent.
-    """
-
-    conn = get_connection()
-
-    cursor = conn.cursor()
-
-    cursor.execute(
+    def get_total_expense(self, trip_id):
         """
-        SELECT COALESCE(
-            SUM(amount),
-            0
-        )
+        Return total trip expenses.
+        """
+
+        self.cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0) AS total
         FROM expenses
+        WHERE trip_id = ?
+        """, (trip_id,))
+
+        row = self.cursor.fetchone()
+
+        return row["total"]
+    
+    def get_category_totals(self, trip_id):
         """
-    )
-
-    total = cursor.fetchone()[0]
-
-    conn.close()
-
-    return total
-
-
-def get_transaction_count():
-    """
-    Return total transactions.
-    """
-
-    conn = get_connection()
-
-    cursor = conn.cursor()
-
-    cursor.execute(
+        Return category-wise expense totals.
         """
-        SELECT COUNT(*)
+
+        self.cursor.execute("""
+        SELECT
+            category,
+            SUM(amount) AS total
         FROM expenses
-        """
-    )
+        WHERE trip_id = ?
+        GROUP BY category
+        """, (trip_id,))
 
-    count = cursor.fetchone()[0]
+        rows = self.cursor.fetchall()
 
-    conn.close()
+        return {
+        row["category"]: row["total"]
+        for row in rows
+        }
+    # ==========================================================
+    # Close Connection
+    # ==========================================================
 
-    return count
+    def close(self):
+        """Close the database connection."""
 
-
-def get_category_summary():
-    """
-    Return category-wise spending.
-    """
-
-    conn = get_connection()
-
-    query = """
-    SELECT
-        category AS Category,
-        SUM(amount) AS Amount
-    FROM expenses
-    GROUP BY category
-    ORDER BY Amount DESC
-    """
-
-    df = pd.read_sql_query(
-        query,
-        conn
-    )
-
-    conn.close()
-
-    return df
-
-
-def get_highest_spending_category():
-    """
-    Return highest spending category.
-    """
-
-    summary = get_category_summary()
-
-    if summary.empty:
-        return None, 0
-
-    category = summary.iloc[0]["Category"]
-    amount = summary.iloc[0]["Amount"]
-
-    return category, amount
+        self.conn.close()
