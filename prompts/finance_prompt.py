@@ -110,6 +110,41 @@ User Question:
 
 {user_query}
 """
+def build_dashboard_prompt(dashboard):
+    """
+    Build prompt for automatic dashboard insights.
+    """
+
+    trip = dashboard["trip"]
+    analytics = dashboard["analytics"]
+    forex = dashboard["forex"]
+
+    return f"""
+You are an intelligent Travel Finance Assistant.
+
+Analyze the travel dashboard and generate SHORT, SMART and ACTIONABLE insights.
+
+Trip Details:
+- Destination: {trip['destination']}
+- Travel Budget: {trip['travel_budget']}
+- Total Spent: {analytics['total_expense']}
+- Remaining Budget: {analytics['remaining_budget']}
+- Daily Allowance: {analytics['daily_allowance']}
+- Burn Rate: {analytics['burn_rate']}%
+- Trip Progress: {analytics['trip_progress']}%
+
+Forex:
+- Current Rate: 1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}
+- 30-Day Trend: {forex['30_day']['trend']}
+
+Rules:
+- Give ONLY 3 concise bullet points.
+- Mention if spending is healthy or risky.
+- Mention forex trend only if relevant.
+- Mention daily spending advice if applicable.
+- Do NOT repeat raw numbers unnecessarily.
+- Maximum 70 words total.
+"""
 # ==========================================================
 # Explore Destination Prompts
 # ==========================================================

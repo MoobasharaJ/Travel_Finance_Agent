@@ -118,7 +118,12 @@ class CurrencyService:
         """
 
         if not rates:
-            return None
+         return {
+          "current_rate": None,
+          "moving_average": None,
+          "percentage_change": 0,
+          "trend": "Unavailable"
+        }
 
         values = [item["rate"] for item in rates]
 

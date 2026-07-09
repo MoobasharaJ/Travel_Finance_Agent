@@ -1,4 +1,5 @@
 import streamlit as st
+import plotly.express as px
 import pandas as pd
 from datetime import date
 
@@ -206,129 +207,315 @@ def show_dashboard():
 
     conversion = dashboard["currency_conversion"]
 
-    st.subheader(
-        f"{trip['destination']} Trip"
+    # ======================================================
+# Dashboard Header
+# ======================================================
+
+    st.header(f"🌍 {trip['destination']} Dashboard")
+
+    status = analytics["trip_status"]
+
+    if status == "Not Started":
+
+       status_text = (
+          f"🟢 Trip starts in "
+          f"{analytics['days_until_trip']} day(s)"
+        )
+
+    elif status == "In Progress":
+
+        current_day = min(
+         analytics["days_elapsed"],
+          trip["duration"]
+        )
+
+        status_text = (
+           f"🟡 Day {current_day} "
+           f"of {trip['duration']}"
+        )
+
+    else:
+
+         status_text = "✅ Trip Completed"
+
+    st.caption(
+        f"📅 {trip['start_date']} → "
+        f"{trip['end_date']} • "
+        f"{trip['duration']} Days"
     )
 
-        # ======================================================
-    # Currency Toggle
-    # ======================================================
+    st.info(status_text)
 
-    st.markdown("### Budget Overview")
+    st.markdown("---")
+    # ======================================================
+# Currency View
+# ======================================================
+
+    st.subheader("💰 Budget Overview")
 
     currency_view = st.radio(
-        "Display Currency",
-        ["INR", trip["currency"]],
-        horizontal=True,
-        key="currency_view_radio"
+      "Display Currency",
+       ["INR", trip["currency"]],
+       horizontal=True,
+       key="currency_view_radio"
     )
 
     if currency_view == "INR":
 
-        budget = trip["travel_budget"]
-        spent = analytics["total_expense"]
-        remaining = analytics["remaining_budget"]
-        safe_spend = analytics["daily_allowance"]
-        currency_symbol = "₹"
+       currency_symbol = "₹"
+
+       total_budget = trip["total_budget"]
+
+       pre_trip = analytics["pre_trip_expenses"]
+
+       travel_budget = trip["travel_budget"]
+
+       spent = analytics["total_expense"]
+
+       remaining = analytics["remaining_budget"]
+
+       safe_spend = analytics["daily_allowance"]
+
+       budget_used = analytics["burn_rate"]
 
     else:
 
-        budget = conversion["travel_budget"]
-        spent = budget - conversion["remaining_budget"]
-        remaining = conversion["remaining_budget"]
-        safe_spend = conversion["remaining_budget"]
+       currency_symbol = trip["currency"]
 
-        currency_symbol = trip["currency"]
+       total_budget = conversion["total_budget"]
 
+       pre_trip = conversion["pre_trip_expenses"]
+
+       travel_budget = conversion["travel_budget"]
+
+       spent = conversion["spent"]
+
+       remaining = conversion["remaining_budget"]
+
+       safe_spend = conversion["daily_allowance"]
+
+       budget_used = analytics["burn_rate"]
+
+# ======================================================
+# Budget Flow
+# ======================================================
+
+    col1, arrow1, col2, arrow2, col3 = st.columns(
+       [3, 0.5, 3, 0.5, 3]
+    )
+
+    with col1:
+
+       st.metric(
+        "💰 Total Budget",
+        f"{currency_symbol} {total_budget:,.2f}"
+       )
+
+    with arrow1:
+
+      st.markdown(
+        "<h2 style='text-align:center;'>⬇️</h2>",
+        unsafe_allow_html=True
+      )
+
+    with col2:
+
+      st.metric(
+        "✈️ Pre-trip Expenses",
+        f"{currency_symbol} {pre_trip:,.2f}"
+      )
+
+    with arrow2:
+
+      st.markdown(
+        "<h2 style='text-align:center;'>⬇️</h2>",
+        unsafe_allow_html=True
+    )
+
+    with col3:
+
+      st.metric(
+        "🎒 Travel Budget",
+        f"{currency_symbol} {travel_budget:,.2f}"
+      )
+
+    st.caption(
+      "Travel Budget = Total Budget − Pre-trip Expenses"
+    )
+
+    st.markdown("---")
     # ======================================================
-    # Budget Cards
-    # ======================================================
+# Current Spending
+# ======================================================
+
+    st.subheader("📊 Current Spending")
 
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.metric(
-            "Travel Budget",
-            f"{currency_symbol} {budget:,.2f}"
-        )
+
+       st.metric(
+        "💸 Spent",
+        f"{currency_symbol} {spent:,.2f}"
+       )
 
     with col2:
-        st.metric(
-            "Spent",
-            f"{currency_symbol} {spent:,.2f}"
-        )
+
+      st.metric(
+        "💰 Remaining",
+        f"{currency_symbol} {remaining:,.2f}"
+      )
 
     with col3:
-        st.metric(
-            "Remaining",
-            f"{currency_symbol} {remaining:,.2f}"
-        )
+
+      st.metric(
+        "📈 Budget Used",
+        f"{budget_used:.1f}%"
+      )
 
     with col4:
+
+      if analytics["trip_status"] == "Not Started":
+
         st.metric(
-            "Today's Safe Spend",
+            "🗓 Trip Starts In",
+            f"{analytics['days_until_trip']} Day(s)"
+        )
+
+      elif analytics["trip_status"] == "In Progress":
+
+        st.metric(
+            "💵 Today's Safe Spend",
             f"{currency_symbol} {safe_spend:,.2f}"
         )
 
+      else:
+
+        st.metric(
+            "✅ Status",
+            "Trip Completed"
+        )
+
     st.markdown("---")
 
     # ======================================================
-    # Forex Snapshot
-    # ======================================================
+# Forex Snapshot
+# ======================================================
 
     st.subheader("📈 Forex Snapshot")
 
-    forex_col1, forex_col2 = st.columns([2, 1])
+    col1, col2 = st.columns([3, 1])
 
-    with forex_col1:
+    with col1:
 
-        st.metric(
-            "Live Exchange Rate",
-            f"1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}"
-        )
+     st.metric(
+        "Live Exchange Rate",
+        f"1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}"
+    )
 
-        st.info(
-            "Open **Forex Center** from the sidebar for detailed "
-            "7-Day and 30-Day trend analysis."
-        )
+    with col2:
 
-    with forex_col2:
+      trend = forex["30_day"].get("trend", "Unavailable")
 
-        trend = forex["7_day"]["trend"]
+      if trend == "Up":
+       st.success("🟢 Good time to exchange")
 
-        if trend == "Up":
-            st.success("🟢 Favorable")
+      elif trend == "Down":
+       st.warning("🟡 Monitor exchange rate")
 
-        elif trend == "Down":
-            st.warning("🟡 Watch Rate")
+      elif trend == "Stable":
+       st.info("⚪ Stable trend")
 
-        else:
-            st.info("⚪ Stable")
+      else:
+       st.info("⚪ Historical trend unavailable")
+
+    st.caption(
+    "For detailed exchange rate analysis, visit Forex Center."
+    )
 
     st.markdown("---")
 
     # ======================================================
-    # AI Recommendation
-    # ======================================================
+# Expense Breakdown
+# ======================================================
 
-    st.subheader("🤖 AI Recommendation")
+    st.subheader("📊 Expense Breakdown")
 
-    if st.button("Generate Recommendation"):
+    breakdown = analytics["category_breakdown"]
 
-        with st.spinner("Analyzing your trip..."):
+    if breakdown:
 
-            prompt = build_dashboard_prompt(dashboard)
+      df = pd.DataFrame(
 
-            st.session_state.dashboard_ai = (
-                llm_service.generate_response(prompt)
-            )
+        list(breakdown.items()),
 
-    if st.session_state.dashboard_ai:
+        columns=[
+            "Category",
+            "Amount"
+        ]
+       )
 
-        st.success(
-            st.session_state.dashboard_ai
+      fig = px.pie(
+
+        df,
+
+        names="Category",
+
+        values="Amount",
+
+        hole=0.45,
+
+        title="Travel Expenses by Category"
+       )
+
+      fig.update_layout(
+        height=420,
+        margin=dict(
+            l=20,
+            r=20,
+            t=50,
+            b=20
+        )
+      )
+
+      st.plotly_chart(
+        fig,
+        use_container_width=True
+      )
+
+    if analytics["top_spending_category"]:
+
+        st.info(
+            f"💡 Highest spending category: "
+            f"**{analytics['top_spending_category']}**"
         )
 
+    else:
+
+      st.info(
+        "No travel expenses yet.\n\n"
+        "Start tracking expenses to visualize your spending."
+    )
+
+    st.markdown("---")
+
+    # ======================================================
+# Smart Insights
+# ======================================================
+
+    st.subheader("💡 Smart Insights")
+
+    if st.session_state.dashboard_ai is None:
+
+      prompt = build_dashboard_prompt(dashboard)
+
+      with st.spinner("Analyzing your trip..."):
+
+        st.session_state.dashboard_ai = (
+            llm_service.generate_response(prompt)
+        )
+
+    st.success(st.session_state.dashboard_ai)
     # ==========================================================
 # Expenses Page
 # ==========================================================

@@ -128,6 +128,7 @@ class TravelService:
         """
         Collect and return complete dashboard data.
         """
+        #print("===== GET DASHBOARD DATA CALLED =====")
 
         # ==================================================
         # Trip Details
@@ -188,7 +189,7 @@ class TravelService:
 
         days_elapsed = calculate_days_elapsed(start_date, today)
 
-        days_remaining = calculate_days_remaining(end_date, today)
+        days_remaining = calculate_days_remaining(start_date, end_date, today)
 
         daily_average = calculate_daily_average(total_expense, days_elapsed)
 
@@ -242,6 +243,23 @@ class TravelService:
                live_rate["exchange_rate"]
             )
         )
+        pre_trip_forex = (
+            self.currency_service.convert_currency(
+              total_pre_trip,
+              live_rate["exchange_rate"]
+            )
+        )
+
+        total_budget_forex = (
+            self.currency_service.convert_currency(
+             trip["total_budget"],
+              live_rate["exchange_rate"]
+            )
+       )
+        spent_forex = self.currency_service.convert_currency(
+             total_expense,
+             live_rate["exchange_rate"]
+   )
 
     # ==================================================
     # Historical Forex
@@ -263,7 +281,7 @@ class TravelService:
         # ==================================================
     # Dashboard Data
     # ==================================================
-
+        
         return {
 
         "trip": trip,
@@ -277,6 +295,8 @@ class TravelService:
             "daily_average": daily_average,
 
             "daily_allowance": daily_allowance,
+
+            "days_elapsed": days_elapsed,
 
             "trip_progress": trip_progress,
 
@@ -296,11 +316,17 @@ class TravelService:
 
         "currency_conversion": {
 
-            "travel_budget": travel_budget_forex,
+             "total_budget": total_budget_forex,
 
-            "remaining_budget": remaining_budget_forex,
+             "travel_budget": travel_budget_forex,
 
-            "daily_allowance": daily_allowance_forex,
+             "pre_trip_expenses": pre_trip_forex,
+
+             "remaining_budget": remaining_budget_forex,
+
+             "daily_allowance": daily_allowance_forex,
+
+             "spent": spent_forex,
         },
 
         "forex": {

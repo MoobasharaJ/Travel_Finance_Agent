@@ -47,19 +47,42 @@ def calculate_trip_duration(start_date: date, end_date: date) -> int:
 
 def calculate_days_elapsed(start_date: date, current_date: date) -> int:
     """
-    Returns days completed in the trip.
+    Returns completed trip days.
+
+    Before trip  -> 0
+    During trip  -> elapsed days
+    After trip   -> total elapsed days
     """
-    elapsed = (current_date - start_date).days + 1
-    return max(elapsed, 0)
+
+    if current_date < start_date:
+        return 0
+
+    return (current_date - start_date).days + 1
 
 
-def calculate_days_remaining(end_date: date, current_date: date) -> int:
+def calculate_days_remaining(
+    start_date: date,
+    end_date: date,
+    current_date: date
+) -> int:
     """
-    Returns remaining trip days.
-    """
-    remaining = (end_date - current_date).days
-    return max(remaining, 0)
+    Returns remaining travel days.
 
+    Before trip -> Full duration
+    During trip -> Remaining days
+    After trip -> 0
+    """
+
+    if current_date < start_date:
+        return calculate_trip_duration(
+            start_date,
+            end_date
+        )
+
+    if current_date > end_date:
+        return 0
+
+    return (end_date - current_date).days + 1
 
 def calculate_daily_average(total_expenses: float, days_elapsed: int) -> float:
     """
@@ -81,14 +104,25 @@ def calculate_daily_allowance(remaining_budget: float, days_remaining: int) -> f
     return round(remaining_budget / days_remaining, 2)
 
 
-def calculate_trip_progress(days_elapsed: int, trip_duration: int) -> float:
+def calculate_trip_progress(
+    days_elapsed: int,
+    trip_duration: int
+) -> float:
     """
-    Trip completion percentage.
+    Returns trip completion percentage.
     """
+
     if trip_duration <= 0:
         return 0.0
 
-    return round((days_elapsed / trip_duration) * 100, 2)
+    progress = (
+        days_elapsed / trip_duration
+    ) * 100
+
+    return round(
+        min(progress, 100),
+        2
+    )
 
 
 def calculate_burn_rate(total_expenses: float, travel_budget: float) -> float:
@@ -101,23 +135,18 @@ def calculate_burn_rate(total_expenses: float, travel_budget: float) -> float:
     return round((total_expenses / travel_budget) * 100, 2)
 
 
-def calculate_category_breakdown(expenses: dict) -> dict:
+def calculate_category_breakdown(
+    expenses: dict
+) -> dict:
     """
-    Returns category-wise spending percentage.
+    Returns actual category totals.
 
-    Example Input:
+    Example:
+
     {
-        "Food": 5000,
-        "Hotel": 12000,
-        "Transport": 3000
+        "Food": 3500,
+        "Hotel": 15000
     }
     """
-    total = sum(expenses.values())
 
-    if total == 0:
-        return {category: 0 for category in expenses}
-
-    return {
-        category: round((amount / total) * 100, 2)
-        for category, amount in expenses.items()
-    }
+    return expenses
