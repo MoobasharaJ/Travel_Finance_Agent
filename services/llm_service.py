@@ -14,6 +14,7 @@ No prompt creation.
 import os
 import streamlit as st
 from google import genai
+from utils.constants import GEMINI_MODEL
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -37,7 +38,7 @@ class LLMService:
 
         self.client = genai.Client(api_key=api_key)
 
-        self.model = "gemini-2.5-flash"
+        self.model = GEMINI_MODEL
     # =====================================================
     # Generate Response
     # =====================================================

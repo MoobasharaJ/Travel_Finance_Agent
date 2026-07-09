@@ -4,7 +4,7 @@ Project-wide constants.
 Travel Finance Agent
 Version: 1.0
 """
-
+GEMINI_MODEL = "gemini-flash-lite-latest"
 # ==========================================================
 # Supported Destinations
 # ==========================================================

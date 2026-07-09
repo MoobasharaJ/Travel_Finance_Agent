@@ -881,11 +881,13 @@ def show_ai():
     # Dashboard Data
     # ------------------------------------------------------
 
-    dashboard = travel_service.get_dashboard_data(
-        st.session_state.trip_id
+    summary = travel_service.get_trip_summary(
+    st.session_state.trip_id
     )
 
-    trip = dashboard["trip"]
+    trip = summary["trip"]
+
+    analytics = summary["analytics"]
 
     # ======================================================
     # Local Eateries

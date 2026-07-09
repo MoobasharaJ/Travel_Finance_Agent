@@ -119,27 +119,18 @@ class TravelService:
         )
 
         return {"message": "Expense added successfully."}
+    
         # ======================================================
 
-    # Dashboard
+    # GET TRIP SUMMARY
     # ======================================================
-
-    def get_dashboard_data(self, trip_id):
-        """
-        Collect and return complete dashboard data.
-        """
-        #print("===== GET DASHBOARD DATA CALLED =====")
-
-        # ==================================================
-        # Trip Details
-        # ==================================================
+    def get_trip_summary(self, trip_id):
 
         trip = self.db.get_trip(trip_id)
-
         if trip is None:
-            return None
-
-        # ==================================================
+          return None
+        
+            # ==================================================
         # Expenses
         # ==================================================
 
@@ -215,6 +206,66 @@ class TravelService:
 
            top_spending_category = None
 
+
+        return {
+
+                "trip": trip,
+
+                   "analytics": {
+
+                  "total_expense": total_expense,
+
+                  "remaining_budget": remaining_budget,
+
+                  "daily_average": daily_average,
+
+                   "daily_allowance": daily_allowance,
+
+                   "days_elapsed": days_elapsed,
+
+                "trip_progress": trip_progress,
+
+                 "burn_rate": burn_rate,
+
+                "category_breakdown": category_breakdown,
+
+                "pre_trip_expenses": total_pre_trip,
+
+                "trip_status": trip_status,
+
+                "days_until_trip": days_until_trip,
+
+                "top_spending_category": top_spending_category,
+                }
+
+        }
+
+
+        # ======================================================
+
+    # Dashboard
+    # ======================================================
+
+    def get_dashboard_data(self, trip_id):
+        """
+        Collect and return complete dashboard data.
+        """
+        #print("===== GET DASHBOARD DATA CALLED =====")
+        summary = self.get_trip_summary(trip_id)
+
+        if summary is None:
+           return None
+
+        trip = summary["trip"]
+        analytics = summary["analytics"]
+        total_expense = analytics["total_expense"]
+
+        total_pre_trip = analytics["pre_trip_expenses"]
+
+        remaining_budget = analytics["remaining_budget"]
+
+        daily_allowance = analytics["daily_allowance"]
+
     # ==================================================
     # Forex
     # ==================================================
@@ -284,57 +335,31 @@ class TravelService:
         
         return {
 
-        "trip": trip,
+    "trip": trip,
 
-        "analytics": {
+    "analytics": analytics,
 
-            "total_expense": total_expense,
+    "currency_conversion": {
 
-            "remaining_budget": remaining_budget,
+        "total_budget": total_budget_forex,
 
-            "daily_average": daily_average,
+        "travel_budget": travel_budget_forex,
 
-            "daily_allowance": daily_allowance,
+        "pre_trip_expenses": pre_trip_forex,
 
-            "days_elapsed": days_elapsed,
+        "remaining_budget": remaining_budget_forex,
 
-            "trip_progress": trip_progress,
+        "daily_allowance": daily_allowance_forex,
 
-            "burn_rate": burn_rate,
+        "spent": spent_forex,
+    },
 
-            "category_breakdown": category_breakdown,
+    "forex": {
 
-            # New Fields
-            "pre_trip_expenses": total_pre_trip,
+        "live_rate": live_rate,
 
-            "trip_status": trip_status,
+        "7_day": trend_7,
 
-            "days_until_trip": days_until_trip,
-
-            "top_spending_category": top_spending_category,
-        },
-
-        "currency_conversion": {
-
-             "total_budget": total_budget_forex,
-
-             "travel_budget": travel_budget_forex,
-
-             "pre_trip_expenses": pre_trip_forex,
-
-             "remaining_budget": remaining_budget_forex,
-
-             "daily_allowance": daily_allowance_forex,
-
-             "spent": spent_forex,
-        },
-
-        "forex": {
-
-            "live_rate": live_rate,
-
-            "7_day": trend_7,
-
-            "30_day": trend_30,
-        }
+        "30_day": trend_30,
     }
+}
