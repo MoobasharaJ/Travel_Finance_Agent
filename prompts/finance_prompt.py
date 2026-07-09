@@ -51,6 +51,7 @@ def build_chat_prompt(summary, user_query):
 
     trip = summary["trip"]
     analytics = summary["analytics"]
+    forex = summary["forex"]
 
     return f"""
 You are an AI Travel Finance Assistant.
