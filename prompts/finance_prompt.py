@@ -51,7 +51,6 @@ def build_chat_prompt(summary, user_query):
 
     trip = summary["trip"]
     analytics = summary["analytics"]
-    forex = summary["forex"]
 
     return f"""
 You are an AI Travel Finance Assistant.
@@ -68,19 +67,6 @@ Travel Budget: {trip['travel_budget']}
 Total Spent: {analytics['total_expense']}
 Remaining Budget: {analytics['remaining_budget']}
 Daily Allowance: {analytics['daily_allowance']}
-
-==========================
-FOREX
-==========================
-
-Current Exchange Rate:
-1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}
-
-7-Day Trend:
-{forex['7_day']}
-
-30-Day Trend:
-{forex['30_day']}
 
 ==========================
 RULES
