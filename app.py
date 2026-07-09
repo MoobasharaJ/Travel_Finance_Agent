@@ -974,8 +974,7 @@ def show_ai():
                 "Analyzing your trip..."
             ):
 
-                prompt = build_chat_prompt(
-                    dashboard,
+                prompt = build_chat_prompt(summary,
                     user_query
                 )
 

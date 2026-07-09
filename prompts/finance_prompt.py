@@ -44,14 +44,13 @@ Instructions
 """
 
 
-def build_chat_prompt(dashboard, user_query):
+def build_chat_prompt(summary, user_query):
     """
     Build prompt for AI chat.
     """
 
-    trip = dashboard["trip"]
-    analytics = dashboard["analytics"]
-    forex = dashboard["forex"]
+    trip = summary["trip"]
+    analytics = summary["analytics"]
 
     return f"""
 You are an AI Travel Finance Assistant.
