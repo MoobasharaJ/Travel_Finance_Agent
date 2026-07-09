@@ -8,6 +8,8 @@ from services.llm_service import LLMService
 from prompts.finance_prompt import (
     build_dashboard_prompt,
     build_chat_prompt,
+    build_local_eateries_prompt,
+    build_tourist_attractions_prompt,
 )
 
 from utils.constants import (
@@ -45,6 +47,13 @@ if "dashboard_ai" not in st.session_state:
 
 if "currency_view" not in st.session_state:
     st.session_state.currency_view = "INR"
+
+if "eateries_result" not in st.session_state:
+    st.session_state.eateries_result = None
+
+if "tourist_result" not in st.session_state:
+    st.session_state.tourist_result = None   
+
 
 # ==========================================================
 # Sidebar
@@ -164,6 +173,16 @@ def show_dashboard():
                     )
 
                     st.session_state.trip_id = trip_id
+
+                    # Reset Explore Cache for new trip
+                    st.session_state.eateries_result = None
+                    st.session_state.tourist_result = None
+
+                    # Optional: Clear previous AI answer
+                    st.session_state.dashboard_ai = None
+
+                    # Optional: Clear previous question
+                    st.session_state.user_ai_query = ""
 
                     st.success("Trip created successfully!")
 
@@ -649,13 +668,21 @@ def show_forex():
         "Equivalent INR",
         f"₹ {converted:,.2f}"
     )    
-    # ==========================================================
-# Ask AI
+# ==========================================================
+# Explore & Ask AI
+# ==========================================================
+
+# ==========================================================
+# Explore & Ask AI
 # ==========================================================
 
 def show_ai():
 
-    st.header("🤖 Ask AI")
+    st.header("✨ Explore Your Destination")
+
+    st.caption(
+        "Smart recommendations tailored for your destination."
+    )
 
     if st.session_state.trip_id is None:
 
@@ -663,27 +690,100 @@ def show_ai():
 
         return
 
+    # ------------------------------------------------------
+    # Dashboard Data
+    # ------------------------------------------------------
+
     dashboard = travel_service.get_dashboard_data(
         st.session_state.trip_id
     )
 
+    trip = dashboard["trip"]
+
+    # ======================================================
+    # Local Eateries
+    # ======================================================
+
+    with st.expander(
+        "🍜 **Local Eateries**\n\nDiscover authentic local flavours",
+        expanded=False
+    ):
+
+        if st.session_state.eateries_result is None:
+
+            with st.spinner(
+                "Finding authentic local eateries..."
+            ):
+
+                prompt = build_local_eateries_prompt(
+                    trip["destination"]
+                )
+
+                st.session_state.eateries_result = (
+                    llm_service.generate_response(prompt)
+                )
+
+        st.markdown(
+            st.session_state.eateries_result
+        )
+
+    # ======================================================
+    # Tourist Attractions
+    # ======================================================
+
+    with st.expander(
+        "🏛 **Tourist Attractions**\n\nDiscover iconic attractions & hidden gems",
+        expanded=False
+    ):
+
+        if st.session_state.tourist_result is None:
+
+            with st.spinner(
+                "Finding popular attractions..."
+            ):
+
+                prompt = build_tourist_attractions_prompt(
+                    trip["destination"]
+                )
+
+                st.session_state.tourist_result = (
+                    llm_service.generate_response(prompt)
+                )
+
+        st.markdown(
+            st.session_state.tourist_result
+        )
+
+    st.markdown("---")
+
+    # ======================================================
+    # Ask AI
+    # ======================================================
+    st.subheader("🤖 Ask AI")
+
     user_query = st.text_area(
-        "Ask your travel finance question",
-        placeholder="Example:\n\nCan I afford Disneyland?\nShould I exchange currency today?\nHow much can I spend on shopping?"
+        "Ask anything about your trip",
+        height=120,
+        placeholder="Example: Can I afford a day trip to Mount Fuji?",
+        key="user_ai_query"
     )
 
     if st.button(
-        "Ask AI",
+        "Get AI Advice",
         use_container_width=True
     ):
 
-        if user_query.strip() == "":
+        if not user_query.strip():
 
-            st.warning("Please enter a question.")
+            st.warning(
+                "Please enter your question."
+            )
 
         else:
 
-            with st.spinner("Thinking..."):
+            with st.spinner(
+                "Analyzing your trip..."
+            ):
 
                 prompt = build_chat_prompt(
                     dashboard,
@@ -694,11 +794,13 @@ def show_ai():
                     prompt
                 )
 
-            st.markdown("### AI Response")
+            st.markdown("---")
 
-            st.success(response)
+            st.subheader("💡 AI Travel Advice")
 
+            with st.container(border=True):
 
+                st.markdown(response)
 # ==========================================================
 # Navigation
 # ==========================================================

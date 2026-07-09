@@ -93,7 +93,8 @@ class CurrencyService:
 
         response = requests.get(url)
 
-        response.raise_for_status()
+        if response.status_code != 200:
+          return []
 
         data = response.json()
 
