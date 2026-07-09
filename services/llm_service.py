@@ -12,10 +12,9 @@ No prompt creation.
 """
 
 import os
-
-from dotenv import load_dotenv
+import streamlit as st
 from google import genai
-
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -24,18 +23,21 @@ class LLMService:
 
     def __init__(self):
 
+        # First try local .env
         api_key = os.getenv("GEMINI_API_KEY")
+
+        # If not found, try Streamlit Secrets
+        if not api_key:
+            api_key = st.secrets.get("GEMINI_API_KEY")
 
         if not api_key:
             raise ValueError(
-                "GEMINI_API_KEY not found in .env file."
+                "GEMINI_API_KEY not found."
             )
 
         self.client = genai.Client(api_key=api_key)
 
-        # Centralized model name
         self.model = "gemini-2.5-flash"
-
     # =====================================================
     # Generate Response
     # =====================================================
