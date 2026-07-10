@@ -94,43 +94,47 @@ class DatabaseService:
     # ==========================================================
 
     def create_trip(
-        self,
-        destination,
-        currency,
-        start_date,
-        end_date,
-        duration,
-        total_budget,
-        travel_budget,
-    ):
-        """Create a new trip."""
+    self,
+    home_country,
+    home_currency,
+    destination_country,
+    destination_currency,
+    start_date,
+    end_date,
+    total_budget,
+):
+      """Create a new trip."""
 
-        self.cursor.execute("""
-            INSERT INTO trips (
-                destination,
-                currency,
-                start_date,
-                end_date,
-                duration,
-                total_budget,
-                travel_budget,
-                created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            destination,
-            currency,
+      self.cursor.execute("""
+        INSERT INTO trips (
+
+            home_country,
+            home_currency,
+            destination_country,
+            destination_currency,
             start_date,
             end_date,
-            duration,
             total_budget,
-            travel_budget,
-            datetime.now().isoformat()
+            created_at
+
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      """, (
+
+          home_country,
+          home_currency,
+          destination_country,
+          destination_currency,
+          start_date,
+          end_date,
+          total_budget,
+          datetime.now().isoformat()
+
         ))
 
-        self.conn.commit()
+      self.conn.commit()
 
-        return self.cursor.lastrowid
+      return self.cursor.lastrowid
 
     def get_trip(self, trip_id):
         """Return a single trip."""
@@ -144,59 +148,45 @@ class DatabaseService:
 
         return dict(row) if row else None
 
-    def update_trip(self, trip_id, travel_budget):
-        """Update travel budget."""
+    def update_trip(
+    self,
+    trip_id,
+    start_date,
+    end_date,
+    total_budget,
+):
+      """Update editable trip details."""
 
-        self.cursor.execute("""
-            UPDATE trips
-            SET travel_budget = ?
-            WHERE trip_id = ?
-        """, (travel_budget, trip_id))
+      self.cursor.execute("""
+        UPDATE trips
+        SET
 
-        self.conn.commit()
+            start_date = ?,
+            end_date = ?,
+            total_budget = ?
 
-    # ==========================================================
-    # Pre-Trip Expense Methods
-    # ==========================================================
+        WHERE trip_id = ?
+      """, (
 
-    def save_pre_trip_expense(
-        self,
-        trip_id,
-        category,
-        amount,
-        notes=""
-    ):
-        """Save a pre-trip expense."""
+          start_date,
+          end_date,
+          total_budget,
+          trip_id
 
-        self.cursor.execute("""
-            INSERT INTO pre_trip_expenses (
-                trip_id,
-                category,
-                amount,
-                notes
-            )
-            VALUES (?, ?, ?, ?)
-        """, (
-            trip_id,
-            category,
-            amount,
-            notes
         ))
 
-        self.conn.commit()
+      self.conn.commit()
 
-    def get_pre_trip_expenses(self, trip_id):
-        """Return all pre-trip expenses."""
+    def delete_trip(self, trip_id):
+      """Delete a trip."""
 
-        self.cursor.execute("""
-            SELECT *
-            FROM pre_trip_expenses
-            WHERE trip_id = ?
-        """, (trip_id,))
+      self.cursor.execute(
+        "DELETE FROM trips WHERE trip_id = ?",
+        (trip_id,)
+      )
 
-        rows = self.cursor.fetchall()
-
-        return [dict(row) for row in rows]
+      self.conn.commit()
+    
 
     # ==========================================================
     # Daily Expense Methods
@@ -205,45 +195,101 @@ class DatabaseService:
     def save_expense(
         self,
         trip_id,
+        expense_type,
         date,
         category,
         amount,
-        notes=""
-    ):
-        """Save a daily expense."""
+        currency,
+        notes="",
+        ):
+        """Save an expense."""
+
+        timestamp = datetime.now().isoformat()
 
         self.cursor.execute("""
-            INSERT INTO expenses (
-                trip_id,
-                date,
-                category,
-                amount,
-                notes
-            )
-            VALUES (?, ?, ?, ?, ?)
-        """, (
+        INSERT INTO expenses (
+
             trip_id,
+            expense_type,
             date,
             category,
             amount,
-            notes
+            currency,
+            notes,
+            created_at,
+            updated_at
+
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+
+        trip_id,
+        expense_type,
+        date,
+        category,
+        amount,
+        currency,
+        notes,
+        timestamp,
+        timestamp
+
         ))
 
         self.conn.commit()
 
     def get_expenses(self, trip_id):
-        """Return all expenses for a trip."""
+      """Return all expenses."""
 
-        self.cursor.execute("""
-            SELECT *
-            FROM expenses
-            WHERE trip_id = ?
-            ORDER BY date ASC
+      self.cursor.execute("""
+          SELECT *
+          FROM expenses
+          WHERE trip_id = ?
+          ORDER BY date DESC, expense_id DESC
         """, (trip_id,))
 
-        rows = self.cursor.fetchall()
+      rows = self.cursor.fetchall()
 
-        return [dict(row) for row in rows]
+      return [dict(row) for row in rows]
+    
+    def update_expense(
+        self,
+        expense_id,
+        expense_type,
+        date,
+        category,
+        amount,
+        currency,
+        notes,
+        ):
+      """Update an expense."""
+
+      self.cursor.execute("""
+         UPDATE expenses
+          SET
+
+            expense_type = ?,
+            date = ?,
+            category = ?,
+            amount = ?,
+            currency = ?,
+            notes = ?,
+            updated_at = ?
+
+          WHERE expense_id = ?
+        """, (
+
+        expense_type,
+        date,
+        category,
+        amount,
+        currency,
+        notes,
+        datetime.now().isoformat(),
+        expense_id
+
+       ))
+
+      self.conn.commit()
 
     def delete_expense(self, expense_id):
         """Delete an expense."""
@@ -255,57 +301,104 @@ class DatabaseService:
 
         self.conn.commit()
 
+    # ==========================================================
+# Analytics Queries
+# ==========================================================
+
     def get_total_pre_trip_expense(self, trip_id):
-       """
-        Return total pre-trip expenses.
-       """
+      """
+      Return total pre-trip expenses.
+      """
 
-       self.cursor.execute("""
-        SELECT COALESCE(SUM(amount), 0) AS total
-        FROM pre_trip_expenses
-        WHERE trip_id = ?
-        """, (trip_id,))
-
-       row = self.cursor.fetchone()
-
-       return row["total"]
-
-
-    def get_total_expense(self, trip_id):
-        """
-        Return total trip expenses.
-        """
-
-        self.cursor.execute("""
+      self.cursor.execute("""
         SELECT COALESCE(SUM(amount), 0) AS total
         FROM expenses
         WHERE trip_id = ?
-        """, (trip_id,))
+        AND expense_type = 'PRE_TRIP'
+       """, (trip_id,))
 
-        row = self.cursor.fetchone()
+      row = self.cursor.fetchone()
 
-        return row["total"]
-    
+      return row["total"]
+
+
+    def get_total_expense(self, trip_id):
+     """
+     Return total travel expenses.
+     """
+
+     self.cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE trip_id = ?
+        AND expense_type = 'TRAVEL'
+     """, (trip_id,))
+
+     row = self.cursor.fetchone()
+
+     return row["total"]
+
+
     def get_category_totals(self, trip_id):
-        """
-        Return category-wise expense totals.
-        """
+      """
+      Return category-wise totals for travel expenses.
+    """
 
-        self.cursor.execute("""
+      self.cursor.execute("""
         SELECT
             category,
             SUM(amount) AS total
         FROM expenses
         WHERE trip_id = ?
+        AND expense_type = 'TRAVEL'
         GROUP BY category
-        """, (trip_id,))
+       """, (trip_id,))
 
-        rows = self.cursor.fetchall()
+      rows = self.cursor.fetchall()
 
-        return {
+      return {
         row["category"]: row["total"]
         for row in rows
-        }
+      }
+
+
+    def get_today_spending(self, trip_id):
+     """
+    Return today's total travel spending.
+    """
+
+     today = datetime.now().date().isoformat()
+
+     self.cursor.execute("""
+        SELECT COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE trip_id = ?
+        AND expense_type = 'TRAVEL'
+        AND date = ?
+    """, (trip_id, today))
+
+     row = self.cursor.fetchone()
+
+     return row["total"]
+
+
+    def get_recent_transactions(self, trip_id):
+     """
+    Return the 3 most recent travel transactions.
+    """
+
+     self.cursor.execute("""
+        SELECT *
+        FROM expenses
+        WHERE trip_id = ?
+        AND expense_type = 'TRAVEL'
+        ORDER BY date DESC, expense_id DESC
+        LIMIT 3
+     """, (trip_id,))
+
+     rows = self.cursor.fetchall()
+
+     return [dict(row) for row in rows]
     # ==========================================================
     # Close Connection
     # ==========================================================
