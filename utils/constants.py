@@ -2,95 +2,90 @@
 Project-wide constants.
 
 Travel Finance Agent
-Version: 1.0
+Version: 1.1
 """
 GEMINI_MODEL = "gemini-flash-lite-latest"
+
 # ==========================================================
-# Supported Destinations
+# Supported Countries
 # ==========================================================
 
-SUPPORTED_DESTINATIONS = {
-    "United States": "USD",
-    "United Kingdom": "GBP",
-    "Japan": "JPY",
-    "Singapore": "SGD",
-    "Thailand": "THB",
-    "United Arab Emirates": "AED",
-    "Vietnam": "VND",
-    "Indonesia": "IDR",
-    "South Korea": "KRW",
-    "Malaysia": "MYR",
-    "Switzerland": "CHF",
-    "Canada": "CAD",
-    "Australia": "AUD",
-    "France": "EUR",
-    "Germany": "EUR",
-    "Italy": "EUR",
-    "Spain": "EUR",
-    "Netherlands": "EUR",
-    "Turkey": "TRY",
-    "Sri Lanka": "LKR",
+SUPPORTED_COUNTRIES = {
+    "Argentina": {"currency": "ARS"},
+    "Australia": {"currency": "AUD"},
+    "Austria": {"currency": "EUR"},
+    "Belgium": {"currency": "EUR"},
+    "Brazil": {"currency": "BRL"},
+    "Canada": {"currency": "CAD"},
+    "China": {"currency": "CNY"},
+    "Denmark": {"currency": "DKK"},
+    "Egypt": {"currency": "EGP"},
+    "Finland": {"currency": "EUR"},
+    "France": {"currency": "EUR"},
+    "Germany": {"currency": "EUR"},
+    "Greece": {"currency": "EUR"},
+    "Hong Kong": {"currency": "HKD"},
+    "India": {"currency": "INR"},
+    "Indonesia": {"currency": "IDR"},
+    "Ireland": {"currency": "EUR"},
+    "Italy": {"currency": "EUR"},
+    "Japan": {"currency": "JPY"},
+    "Malaysia": {"currency": "MYR"},
+    "Maldives": {"currency": "MVR"},
+    "Mexico": {"currency": "MXN"},
+    "Morocco": {"currency": "MAD"},
+    "Nepal": {"currency": "NPR"},
+    "Netherlands": {"currency": "EUR"},
+    "New Zealand": {"currency": "NZD"},
+    "Norway": {"currency": "NOK"},
+    "Poland": {"currency": "PLN"},
+    "Portugal": {"currency": "EUR"},
+    "Qatar": {"currency": "QAR"},
+    "Singapore": {"currency": "SGD"},
+    "South Korea": {"currency": "KRW"},
+    "Spain": {"currency": "EUR"},
+    "Sri Lanka": {"currency": "LKR"},
+    "Sweden": {"currency": "SEK"},
+    "Switzerland": {"currency": "CHF"},
+    "Taiwan": {"currency": "TWD"},
+    "Thailand": {"currency": "THB"},
+    "Turkey": {"currency": "TRY"},
+    "United Arab Emirates": {"currency": "AED"},
+    "United Kingdom": {"currency": "GBP"},
+    "United States": {"currency": "USD"},
+    "Vietnam": {"currency": "VND"},
 }
 
 # ==========================================================
-# Home Currency
-# ==========================================================
-
-HOME_CURRENCY = "INR"
-
-# ==========================================================
-# Pre-Trip Expense Categories
-# ==========================================================
-
-PRE_TRIP_CATEGORIES = [
-    "Flight",
-    "Visa",
-    "Insurance",
-    "Forex Card",
-    "Shopping",
-    "Others",
-]
-
-# ==========================================================
-# During-Trip Expense Categories
+# Expense Categories
 # ==========================================================
 
 EXPENSE_CATEGORIES = [
+    "Flight",
+    "Visa",
+    "Insurance",
+    "Accommodation",
     "Food",
-    "Hotel",
-    "Transport",
+    "Transportation",
+    "Shopping",
     "Entertainment",
     "Medical",
+    "SIM/Internet",
     "Miscellaneous",
 ]
 
 # ==========================================================
-# Destination Cost Level
-# Used for simple UI display
+# Expense Types
 # ==========================================================
 
-DESTINATION_COST_LEVEL = {
-    "United States": "High",
-    "United Kingdom": "High",
-    "Japan": "High",
-    "Singapore": "High",
-    "Switzerland": "Very High",
-    "Canada": "High",
-    "Australia": "High",
-    "France": "High",
-    "Germany": "High",
-    "Italy": "Medium",
-    "Spain": "Medium",
-    "Netherlands": "High",
-    "United Arab Emirates": "Medium",
-    "South Korea": "Medium",
-    "Thailand": "Low",
-    "Vietnam": "Low",
-    "Indonesia": "Low",
-    "Malaysia": "Low",
-    "Turkey": "Low",
-    "Sri Lanka": "Low",
-}
+PRE_TRIP = "PRE_TRIP"
+
+TRAVEL = "TRAVEL"
+
+EXPENSE_TYPES = [
+    PRE_TRIP,
+    TRAVEL,
+]
 
 # ==========================================================
 # Forex Configuration
@@ -127,19 +122,3 @@ DATABASE_PATH = "data/travel.db"
 
 MIN_FORECAST_DAYS = 3
 
-# ==========================================================
-# Dashboard Labels
-# ==========================================================
-
-DASHBOARD_METRICS = [
-    "Destination",
-    "Total Budget",
-    "Travel Budget",
-    "Spent",
-    "Remaining",
-    "Daily Allowance",
-    "Trip Progress",
-    "Live Forex",
-    "Forex Insight",
-    "AI Recommendation",
-]
