@@ -4,8 +4,7 @@ SQLite Database Service
 Responsible for:
 - Creating database tables
 - CRUD operations for trips
-- CRUD operations for pre-trip expenses
-- CRUD operations for daily expenses
+- CRUD operations for expenses
 
 No calculations.
 No AI.
@@ -25,50 +24,68 @@ class DatabaseService:
         self.cursor = self.conn.cursor()
 
         self.create_tables()
-
-    # ==========================================================
-    # Create Tables
-    # ==========================================================
-
     def create_tables(self):
-        """Create all required tables if they don't exist."""
+        """Create all required tables."""
+
+    # ======================================================
+    # Trips
+    # ======================================================
 
         self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS trips (
-                trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                destination TEXT NOT NULL,
-                currency TEXT NOT NULL,
-                start_date TEXT NOT NULL,
-                end_date TEXT NOT NULL,
-                duration INTEGER NOT NULL,
-                total_budget REAL NOT NULL,
-                travel_budget REAL NOT NULL,
-                created_at TEXT NOT NULL
-            )
-        """)
+        CREATE TABLE IF NOT EXISTS trips (
+
+            trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            home_country TEXT NOT NULL,
+
+            home_currency TEXT NOT NULL,
+
+            destination_country TEXT NOT NULL,
+
+            destination_currency TEXT NOT NULL,
+
+            start_date TEXT NOT NULL,
+
+            end_date TEXT NOT NULL,
+
+            total_budget REAL NOT NULL,
+
+            created_at TEXT NOT NULL
+        )
+    """)
+
+    # ======================================================
+    # Expenses
+    # ======================================================
 
         self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS pre_trip_expenses (
-                expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                trip_id INTEGER NOT NULL,
-                category TEXT NOT NULL,
-                amount REAL NOT NULL,
-                notes TEXT,
-                FOREIGN KEY (trip_id) REFERENCES trips(trip_id)
-            )
-        """)
+        CREATE TABLE IF NOT EXISTS expenses (
 
-        self.cursor.execute("""
-            CREATE TABLE IF NOT EXISTS expenses (
-                expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                trip_id INTEGER NOT NULL,
-                date TEXT NOT NULL,
-                category TEXT NOT NULL,
-                amount REAL NOT NULL,
-                notes TEXT,
-                FOREIGN KEY (trip_id) REFERENCES trips(trip_id)
-            )
-        """)
+            expense_id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            trip_id INTEGER NOT NULL,
+
+            expense_type TEXT NOT NULL,
+
+            date TEXT NOT NULL,
+
+            category TEXT NOT NULL,
+
+            amount REAL NOT NULL,
+
+            currency TEXT NOT NULL,
+
+            notes TEXT,
+
+            created_at TEXT NOT NULL,
+
+            updated_at TEXT NOT NULL,
+
+            FOREIGN KEY (trip_id)
+                REFERENCES trips(trip_id)
+                ON DELETE CASCADE
+        )
+    """)
 
         self.conn.commit()
 
