@@ -9,41 +9,6 @@ No calculations.
 No business logic.
 """
 
-import json
-
-
-def build_dashboard_prompt(dashboard_data):
-    """
-    Build prompt for automatic dashboard financial advice.
-    """
-
-    dashboard_json = json.dumps(dashboard_data, indent=2)
-
-    return f"""
-You are an AI Travel Finance Advisor.
-
-Your role is to explain the user's financial situation during their trip.
-
-Below is the complete dashboard data.
-
-Dashboard Data
---------------
-{dashboard_json}
-
-Instructions
-------------
-- Use ONLY the provided information.
-- Never perform calculations.
-- Never invent numbers.
-- Never predict future exchange rates.
-- Explain what the forex trend means.
-- Mention whether spending appears healthy.
-- Mention if the remaining budget seems sufficient.
-- Give practical travel finance advice.
-- Keep the response under 120 words.
-"""
-
-
 def build_chat_prompt(summary, user_query):
     """
     Build prompt for AI chat.
@@ -61,13 +26,14 @@ Your purpose is to help travelers make smarter financial decisions and explore t
 TRIP DETAILS
 ==========================
 
-Destination: {trip['destination']}
-Currency: {trip['currency']}
-Travel Budget: {trip['travel_budget']}
+Home Country: {trip['home_country']}
+Destination: {trip['destination_country']}
+Home Currency: {trip['home_currency']}
+Destination Currency: {trip['destination_currency']}
+Travel Budget ({trip['home_currency']}): {analytics['travel_budget']}
 Total Spent: {analytics['total_expense']}
-Remaining Budget: {analytics['remaining_budget']}
-Daily Allowance: {analytics['daily_allowance']}
-
+Remaining Budget ({trip['home_currency']}): {analytics['remaining_budget']}
+Daily Allowance ({trip['home_currency']}): {analytics['daily_allowance']}
 ==========================
 RULES
 ==========================
@@ -108,26 +74,33 @@ def build_dashboard_prompt(dashboard):
     return f"""
 You are an intelligent Travel Finance Assistant.
 
-Analyze the travel dashboard and generate SHORT, SMART and ACTIONABLE insights.
+Analyze the user's travel dashboard and provide concise financial advice based only on the available data.
 
 Trip Details:
-- Destination: {trip['destination']}
-- Travel Budget: {trip['travel_budget']}
+- Home Country: {trip['home_country']}
+- Destination: {trip['destination_country']}
+- Home Currency: {trip['home_currency']}
+- Destination Currency: {trip['destination_currency']}
+- Total Budget: {analytics['total_budget']}
+- Travel Budget ({trip['home_currency']}): {analytics['travel_budget']}
 - Total Spent: {analytics['total_expense']}
-- Remaining Budget: {analytics['remaining_budget']}
-- Daily Allowance: {analytics['daily_allowance']}
-- Burn Rate: {analytics['burn_rate']}%
-- Trip Progress: {analytics['trip_progress']}%
+- Remaining Budget ({trip['home_currency']}): {analytics['remaining_budget']}
+- Daily Allowance ({trip['home_currency']}): {analytics['daily_allowance']}
+- Days Remaining: {analytics['days_remaining']}
+- Trip Status: {analytics['trip_status']}
 
 Forex:
-- Current Rate: 1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}
-- 30-Day Trend: {forex['30_day']['trend']}
+Current Exchange Rate:
+1 {trip['home_currency']} = {forex['live_rate']['exchange_rate']} {trip['destination_currency']}
+
+- 7-Day Trend: {forex['7_day']['trend']}
 
 Rules:
 - Give ONLY 3 concise bullet points.
-- Mention if spending is healthy or risky.
-- Mention forex trend only if relevant.
-- Mention daily spending advice if applicable.
+- Comment on the remaining budget.
+- Comment on the daily allowance.
+- Mention the forex trend if it affects travel decisions.
+- Keep the advice practical.
 - Do NOT repeat raw numbers unnecessarily.
 - Maximum 70 words total.
 """

@@ -10,25 +10,11 @@ No AI.
 from datetime import date
 
 
-def calculate_total_pre_trip_expenses(expenses: list[float]) -> float:
-    """
-    Calculate total pre-trip expenses.
-    """
-    return round(sum(expenses), 2)
-
-
 def calculate_travel_budget(total_budget: float, pre_trip_expenses: float) -> float:
     """
     Travel Budget = Total Budget - Pre-trip Expenses
     """
     return round(total_budget - pre_trip_expenses, 2)
-
-
-def calculate_total_expenses(expenses: list[float]) -> float:
-    """
-    Calculate total trip expenses.
-    """
-    return round(sum(expenses), 2)
 
 
 def calculate_remaining_budget(travel_budget: float, total_expenses: float) -> float:
@@ -84,15 +70,6 @@ def calculate_days_remaining(
 
     return (end_date - current_date).days + 1
 
-def calculate_daily_average(total_expenses: float, days_elapsed: int) -> float:
-    """
-    Average daily spending.
-    """
-    if days_elapsed <= 0:
-        return 0.0
-
-    return round(total_expenses / days_elapsed, 2)
-
 
 def calculate_daily_allowance(remaining_budget: float, days_remaining: int) -> float:
     """
@@ -102,51 +79,3 @@ def calculate_daily_allowance(remaining_budget: float, days_remaining: int) -> f
         return 0.0
 
     return round(remaining_budget / days_remaining, 2)
-
-
-def calculate_trip_progress(
-    days_elapsed: int,
-    trip_duration: int
-) -> float:
-    """
-    Returns trip completion percentage.
-    """
-
-    if trip_duration <= 0:
-        return 0.0
-
-    progress = (
-        days_elapsed / trip_duration
-    ) * 100
-
-    return round(
-        min(progress, 100),
-        2
-    )
-
-
-def calculate_burn_rate(total_expenses: float, travel_budget: float) -> float:
-    """
-    Percentage of travel budget already spent.
-    """
-    if travel_budget <= 0:
-        return 0.0
-
-    return round((total_expenses / travel_budget) * 100, 2)
-
-
-def calculate_category_breakdown(
-    expenses: dict
-) -> dict:
-    """
-    Returns actual category totals.
-
-    Example:
-
-    {
-        "Food": 3500,
-        "Hotel": 15000
-    }
-    """
-
-    return expenses

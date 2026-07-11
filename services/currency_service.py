@@ -18,68 +18,110 @@ from datetime import datetime, timedelta
 import requests
 
 from utils.constants import (
-    SUPPORTED_DESTINATIONS,
-    HOME_CURRENCY,
+    SUPPORTED_COUNTRIES,
     LIVE_FOREX_API_URL,
     HISTORICAL_FOREX_API_URL,
 )
 
 
 class CurrencyService:
-
+      
+    def __init__(self):
+        # Cache for exchange rates
+        self.exchange_rate_cache = {}
     # ======================================================
-    # Destination
+    # # Country & Currency
     # ======================================================
 
-    def get_currency(self, destination):
-        """Return currency code for a destination."""
-        return SUPPORTED_DESTINATIONS.get(destination)
-
+    def get_currency(self, country):
+        """
+        Return currency code for a country.
+       """
+        return SUPPORTED_COUNTRIES[country]["currency"]
     # ======================================================
     # Live Exchange Rate
     # ======================================================
 
-    def get_live_exchange_rate(self, currency):
-        """
-        Returns INR -> Destination exchange rate.
-        """
+    def get_live_exchange_rate(
+        self,
+        base_currency,
+        target_currency,
+):
+       """
+       Return live exchange rate between two currencies.
+    """
+       cache_key = f"{base_currency}_{target_currency}"
 
-        response = requests.get(
-            f"{LIVE_FOREX_API_URL}/{HOME_CURRENCY}"
-        )
+       if cache_key in self.exchange_rate_cache:
+         return self.exchange_rate_cache[cache_key]
+       
 
-        response.raise_for_status()
+       response = requests.get(
+        f"{LIVE_FOREX_API_URL}/{base_currency}"
+       )
 
-        data = response.json()
+       response.raise_for_status()
 
-        return {
-            "base_currency": HOME_CURRENCY,
-            "target_currency": currency,
-            "exchange_rate": data["rates"][currency]
-        }
+       data = response.json()
+
+       result = {
+        "base_currency": base_currency,
+        "target_currency": target_currency,
+         "exchange_rate": data["rates"][target_currency],
+         }
+
+       self.exchange_rate_cache[cache_key] = result
+
+       return result
 
     # ======================================================
     # Currency Conversion
     # ======================================================
 
     def convert_currency(self, amount, exchange_rate):
-        """
-        Convert INR into destination currency.
-        """
-        return round(amount * exchange_rate, 2)
+       """
+       Convert an amount using the provided exchange rate.
+    """
+       return round(amount * exchange_rate, 2)
     
-    def convert_to_inr(amount, exchange_rate):
+        # ======================================================
+    # Convert Between Two Currencies
+    # ======================================================
 
-       return round(amount / exchange_rate, 2)
+    def convert_between_currencies(
+        self,
+        amount,
+        from_currency,
+        to_currency,
+    ):
+        """
+        Convert an amount from one currency to another.
+        """
 
+        # No conversion required
+        if from_currency == to_currency:
+            return round(amount, 2)
+
+        # Fetch live exchange rate
+        live_rate = self.get_live_exchange_rate(
+            from_currency,
+            to_currency,
+        )
+
+        return self.convert_currency(
+            amount,
+            live_rate["exchange_rate"],
+        )
+    
     # ======================================================
     # Historical Rates
     # ======================================================
 
-    def get_historical_rates(self, currency, days=30):
+    def get_historical_rates(self, base_currency,  target_currency, days=30,):
+    
         """
-        Returns historical INR -> destination currency rates.
-        """
+        Returns historical exchange rates between two currencies.
+      """
 
         end_date = datetime.today().date()
         start_date = end_date - timedelta(days=days)
@@ -87,8 +129,8 @@ class CurrencyService:
         url = (
             f"{HISTORICAL_FOREX_API_URL}/"
             f"{start_date}..{end_date}"
-            f"?from={HOME_CURRENCY}"
-            f"&to={currency}"
+            f"?from={base_currency}"
+            f"&to={target_currency}"
         )
 
         response = requests.get(url)
@@ -103,7 +145,7 @@ class CurrencyService:
         for date, value in data["rates"].items():
             rates.append({
                 "date": date,
-                "rate": value[currency]
+                "rate": value[target_currency]
             })
 
         return rates

@@ -14,9 +14,9 @@ from prompts.finance_prompt import (
 )
 
 from utils.constants import (
-    SUPPORTED_DESTINATIONS,
-    PRE_TRIP_CATEGORIES,
+    SUPPORTED_COUNTRIES,
     EXPENSE_CATEGORIES,
+    EXPENSE_TYPES,PRE_TRIP, TRAVEL, PRE_TRIP_CATEGORIES, TRAVEL_CATEGORIES
 )
 
 # ==========================================================
@@ -74,8 +74,9 @@ with st.sidebar:
 
         st.subheader("Current Trip")
 
-        st.write(f"📍 {trip['destination']}")
-        st.write(f"💱 {trip['currency']}")
+        st.write(f"📍 {trip['destination_country']}")
+        st.write(f"🏠 {trip['home_country']} ({trip['home_currency']})")
+        st.write(f"✈️ {trip['destination_country']} ({trip['destination_currency']})")
         st.write(
             f"🗓️ {trip['start_date']} → {trip['end_date']}"
         )
@@ -116,19 +117,35 @@ def show_dashboard():
 
             with col1:
 
-                destination = st.selectbox(
-                    "Destination",
-                    options=list(SUPPORTED_DESTINATIONS.keys()),
+                home_country = st.selectbox(
+                   "Home Country",
+                    sorted(SUPPORTED_COUNTRIES.keys()),
                     index=None,
-                    placeholder="Select Destination",
-                )
+                     placeholder="Select Home Country",
+                    )
+
+                destination_country = st.selectbox(
+                     "Destination Country",
+                      sorted(SUPPORTED_COUNTRIES.keys()),
+                      index=None,
+                      placeholder="Select Destination Country",
+                    )
+
+                if home_country:
+
+                   home_currency = SUPPORTED_COUNTRIES[home_country]["currency"]
+
+                else:
+
+                   home_currency = ""
 
                 total_budget = st.number_input(
-                    "Total Budget (INR)",
+                    "Total Budget",
                     min_value=0.0,
-                    step=1000.0,
-                )
-
+                    step=1000.0,)
+                 
+                if home_currency:
+                     st.caption(f"Currency: {home_currency}")
             with col2:
 
                 start_date = st.date_input(
@@ -148,9 +165,17 @@ def show_dashboard():
 
             if submitted:
 
-                if destination is None:
+                if home_country is None or destination_country is None:
 
-                    st.error("Please select a destination.")
+                   st.error(
+                    "Please select both Home Country and Destination Country."
+                     )
+
+                elif home_country == destination_country:
+
+                   st.error(
+                    "Home country and destination country cannot be the same."
+                    )
 
                 elif end_date < start_date:
 
@@ -167,11 +192,12 @@ def show_dashboard():
                 else:
 
                     trip_id = travel_service.create_trip(
-                        destination,
-                        start_date,
-                        end_date,
-                        total_budget
-                    )
+                         home_country,
+                         destination_country,
+                         start_date,
+                         end_date,
+                        total_budget,
+                        )
 
                     st.session_state.trip_id = trip_id
 
@@ -211,7 +237,7 @@ def show_dashboard():
 # Dashboard Header
 # ======================================================
 
-    st.header(f"🌍 {trip['destination']} Dashboard")
+    st.header(f"🌍 {trip['destination_country']} Dashboard")
 
     status = analytics["trip_status"]
 
@@ -226,12 +252,12 @@ def show_dashboard():
 
         current_day = min(
          analytics["days_elapsed"],
-          trip["duration"]
+          analytics["trip_duration"]
         )
 
         status_text = (
            f"🟡 Day {current_day} "
-           f"of {trip['duration']}"
+           f"of {analytics["trip_duration"]}"
         )
 
     else:
@@ -241,7 +267,7 @@ def show_dashboard():
     st.caption(
         f"📅 {trip['start_date']} → "
         f"{trip['end_date']} • "
-        f"{trip['duration']} Days"
+        f"{analytics["trip_duration"]} Days"
     )
 
     st.info(status_text)
@@ -254,21 +280,23 @@ def show_dashboard():
     st.subheader("💰 Budget Overview")
 
     currency_view = st.radio(
-      "Display Currency",
-       ["INR", trip["currency"]],
-       horizontal=True,
-       key="currency_view_radio"
-    )
+        "Display Currency",
+        [
+          trip["home_currency"],
+          trip["destination_currency"],],
+         horizontal=True,
+         key="currency_view_radio",
+        )
 
-    if currency_view == "INR":
+    if currency_view == trip["home_currency"]:
 
-       currency_symbol = "₹"
+       currency_symbol = trip["home_currency"]
 
        total_budget = trip["total_budget"]
 
        pre_trip = analytics["pre_trip_expenses"]
 
-       travel_budget = trip["travel_budget"]
+       travel_budget = analytics["travel_budget"]
 
        spent = analytics["total_expense"]
 
@@ -276,11 +304,10 @@ def show_dashboard():
 
        safe_spend = analytics["daily_allowance"]
 
-       budget_used = analytics["burn_rate"]
 
     else:
 
-       currency_symbol = trip["currency"]
+       currency_symbol = trip["destination_currency"]
 
        total_budget = conversion["total_budget"]
 
@@ -293,8 +320,6 @@ def show_dashboard():
        remaining = conversion["remaining_budget"]
 
        safe_spend = conversion["daily_allowance"]
-
-       budget_used = analytics["burn_rate"]
 
 # ======================================================
 # Budget Flow
@@ -368,13 +393,6 @@ def show_dashboard():
 
     with col3:
 
-      st.metric(
-        "📈 Budget Used",
-        f"{budget_used:.1f}%"
-      )
-
-    with col4:
-
       if analytics["trip_status"] == "Not Started":
 
         st.metric(
@@ -410,7 +428,7 @@ def show_dashboard():
 
      st.metric(
         "Live Exchange Rate",
-        f"1 INR = {forex['live_rate']['exchange_rate']} {trip['currency']}"
+        f"1 {trip['home_currency']} = {forex['live_rate']['exchange_rate']} {trip['destination_currency']}"
     )
 
     with col2:
@@ -530,101 +548,44 @@ def show_expenses():
 
         return
 
-    # ======================================================
-    # Pre-Trip Expenses
-    # ======================================================
-
-    st.subheader("Pre-trip Expenses")
-
-    with st.form("pre_trip_form"):
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-
-            category = st.selectbox(
-                "Category",
-                PRE_TRIP_CATEGORIES,
-                index=None,
-                placeholder="Select Category"
-            )
-
-        with col2:
-
-            amount = st.number_input(
-                "Amount (INR)",
-                min_value=0.0,
-                step=100.0
-            )
-
-        notes = st.text_input("Notes (Optional)")
-
-        submitted = st.form_submit_button(
-            "Add Pre-trip Expense",
-            use_container_width=True
-        )
-
-        if submitted:
-
-            if category is None:
-
-                st.error("Please select a category.")
-
-            elif amount <= 0:
-
-                st.error("Enter a valid amount.")
-
-            else:
-
-                travel_service.add_pre_trip_expense(
-                    st.session_state.trip_id,
-                    category,
-                    amount,
-                    notes
-                )
-
-                st.success("Expense added successfully.")
-
-                st.rerun()
-
-    # ======================================================
-    # Pre-trip Expense History
-    # ======================================================
-
-    st.markdown("### Expense History")
-
-    history = travel_service.db.get_pre_trip_expenses(
+    trip = travel_service.db.get_trip(
         st.session_state.trip_id
     )
 
-    if history:
+    # ======================================================
+    # Expense Type
+    # ======================================================
 
-        df = pd.DataFrame(history)
+    st.subheader("Add Expense")
 
-        st.dataframe(
-            df[
-                [
-                    "category",
-                    "amount",
-                    "notes"
-                ]
-            ],
-            use_container_width=True
-        )
+    expense_type = st.radio(
+        "Expense Type",
+        EXPENSE_TYPES,
+        horizontal=True,
+        key="expense_type_radio",
+    )
+
+    # ======================================================
+    # Dynamic Category & Currency
+    # ======================================================
+
+    if expense_type == PRE_TRIP:
+
+        categories = PRE_TRIP_CATEGORIES
+
+        currency = trip["home_currency"]
 
     else:
 
-        st.info("No pre-trip expenses added.")
+        categories = TRAVEL_CATEGORIES
 
-    st.markdown("---")
+        currency = trip["destination_currency"]
 
     # ======================================================
-    # Daily Expenses
+    # Expense Form
     # ======================================================
 
-    st.subheader("Daily Expenses")
-
-    with st.form("daily_expense_form"):
+    with st.form("expense_form", clear_on_submit=True):
 
         col1, col2 = st.columns(2)
 
@@ -635,84 +596,162 @@ def show_expenses():
                 value=date.today()
             )
 
-            expense_category = st.selectbox(
+            category = st.selectbox(
                 "Category",
-                EXPENSE_CATEGORIES,
+                categories,
                 index=None,
-                placeholder="Select Category"
+                placeholder="Select Category",
+            )
+
+            amount = st.number_input(
+                f"Amount ({currency})",
+                min_value=0.0,
+                step=100.0,
             )
 
         with col2:
 
-            expense_amount = st.number_input(
-                "Amount",
-                min_value=0.0,
-                step=100.0
+            st.text_input(
+                "Currency",
+                value=currency,
+                disabled=True,
             )
 
-            expense_notes = st.text_input(
-                "Notes"
+            notes = st.text_area(
+                "Notes (Optional)",
+                height=100,
             )
 
         submitted = st.form_submit_button(
-            "Add Daily Expense",
-            use_container_width=True
+            "Add Expense",
+            use_container_width=True,
         )
 
         if submitted:
 
-            if expense_category is None:
+            if category is None:
 
                 st.error("Please select a category.")
 
-            elif expense_amount <= 0:
+            elif amount <= 0:
 
-                st.error("Enter a valid amount.")
+                st.error("Amount must be greater than zero.")
 
             else:
 
                 travel_service.add_expense(
-                    st.session_state.trip_id,
-                    expense_date,
-                    expense_category,
-                    expense_amount,
-                    expense_notes
+                    trip_id=st.session_state.trip_id,
+                    expense_type=expense_type,
+                    expense_date=expense_date,
+                    category=category,
+                    amount=amount,
+                    currency=currency,
+                    notes=notes,
                 )
 
-                st.success("Expense added successfully.")
+                st.success("Expense added successfully!")
 
                 st.rerun()
 
-    # ======================================================
-    # Daily Expense History
-    # ======================================================
+    st.markdown("---")
 
-    st.markdown("### Daily Expense History")
+    # ======================================================
+# Expense History
+# ======================================================
+
+    st.subheader("Expense History")
 
     expenses = travel_service.db.get_expenses(
-        st.session_state.trip_id
-    )
+      st.session_state.trip_id
+     )
 
     if expenses:
 
-        df = pd.DataFrame(expenses)
+       df = pd.DataFrame(expenses)
 
-        st.dataframe(
-            df[
-                [
-                    "date",
-                    "category",
-                    "amount",
-                    "notes"
-                ]
-            ],
-            use_container_width=True
-        )
+       display_df = df[
+        [
+            "date",
+            "expense_type",
+            "category",
+            "currency",
+            "amount",
+            "notes",
+        ]
+       ].copy()
+
+       display_df.columns = [
+        "Date",
+        "Type",
+        "Category",
+        "Currency",
+        "Amount",
+        "Notes",
+       ]
+
+       st.dataframe(
+        display_df,
+        use_container_width=True,
+        hide_index=True,
+      )
 
     else:
 
-        st.info("No daily expenses added.")
+       st.info("No expenses added yet.")
 
+
+    # ======================================================
+# Recent Transactions
+# ======================================================
+
+    st.markdown("---")
+
+    st.subheader("Recent Transactions")
+
+    if expenses:
+
+       recent = expenses[:3]
+
+       for expense in recent:
+
+            col1, col2, col3 = st.columns([3, 2, 1])
+
+            with col1:
+
+              st.write(
+                f"**{expense['category']}** "
+                f"({expense['expense_type']})"
+             )
+
+              st.caption(
+                f"{expense['date']} • {expense['notes']}"
+             )
+
+            with col2:
+
+              st.metric(
+                expense["currency"],
+                f"{expense['amount']:,.2f}"
+              )
+
+            with col3:
+
+              if st.button(
+                "🗑️",
+                key=f"delete_{expense['expense_id']}",
+            ):
+
+                travel_service.db.delete_expense(
+                    expense["expense_id"]
+                )
+
+                st.success("Expense deleted.")
+
+                st.rerun()
+
+    else:
+
+        st.info("No recent transactions.")   
     # ==========================================================
 # Forex Center
 # ==========================================================
@@ -741,9 +780,9 @@ def show_forex():
     st.subheader("Live Exchange Rate")
 
     st.metric(
-        f"1 INR",
-        f"{forex['live_rate']['exchange_rate']} {trip['currency']}"
-    )
+         f"1 {trip['home_currency']}",
+         f"{forex['live_rate']['exchange_rate']} {trip['destination_currency']}"
+        )
 
     st.markdown("---")
 
@@ -844,17 +883,17 @@ def show_forex():
     st.subheader("Currency Converter")
 
     amount = st.number_input(
-        f"Amount ({trip['currency']})",
+        f"Amount ({trip['home_currency']})",
         min_value=0.0,
         step=100.0,
     )
 
-    converted = amount / forex["live_rate"]["exchange_rate"]
+    converted = amount * forex["live_rate"]["exchange_rate"]
 
     st.metric(
-        "Equivalent INR",
-        f"₹ {converted:,.2f}"
-    )    
+         f"Equivalent {trip['destination_currency']}",
+         f"{converted:,.2f} {trip['destination_currency']}"
+)   
 # ==========================================================
 # Explore & Ask AI
 # ==========================================================
@@ -905,7 +944,7 @@ def show_ai():
             ):
 
                 prompt = build_local_eateries_prompt(
-                    trip["destination"]
+                    trip["destination_country"]
                 )
 
                 st.session_state.eateries_result = (
@@ -932,7 +971,7 @@ def show_ai():
             ):
 
                 prompt = build_tourist_attractions_prompt(
-                    trip["destination"]
+                    trip["destination_country"]
                 )
 
                 st.session_state.tourist_result = (

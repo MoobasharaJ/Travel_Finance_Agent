@@ -122,3 +122,23 @@ DATABASE_PATH = "data/travel.db"
 
 MIN_FORECAST_DAYS = 3
 
+
+PRE_TRIP_CATEGORIES = [
+    "Flight",
+    "Visa",
+    "Insurance",
+    "Forex Card / Cash Exchange",
+    "Shopping",
+    "Others",
+]
+
+TRAVEL_CATEGORIES = [
+    "Accommodation",
+    "Food",
+    "Transportation",
+    "Entertainment",
+    "Medical",
+    "Shopping",
+    "SIM/Internet",
+    "Miscellaneous",
+]
