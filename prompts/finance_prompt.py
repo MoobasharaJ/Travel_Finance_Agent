@@ -189,10 +189,6 @@ For EACH place use EXACTLY this format:
 
 ⭐ Rating: X.X (if available)
 
-✅ Why: Maximum ONE short sentence.
-
-💡 Budget Fit: Fits today's budget / Slightly expensive / Premium choice.
-
 ================================================
 RULES
 ================================================
