@@ -244,7 +244,7 @@ class DatabaseService:
           SELECT *
           FROM expenses
           WHERE trip_id = ?
-          ORDER BY date DESC, expense_id DESC
+          ORDER BY created_at DESC
         """, (trip_id,))
 
       rows = self.cursor.fetchall()

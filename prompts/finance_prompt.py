@@ -104,85 +104,114 @@ Rules:
 - Do NOT repeat raw numbers unnecessarily.
 - Maximum 70 words total.
 """
+
 # ==========================================================
-# Explore Destination Prompts
+# Nearby Place Recommendation Prompt
 # ==========================================================
 
-def build_local_eateries_prompt(destination: str) -> str:
+def build_nearby_recommendation_prompt(
+    dashboard,
+    places,
+    category,
+):
     """
-    Prompt for recommending authentic local eateries.
+    Build prompt for ranking nearby places based on
+    user's travel budget and forex.
     """
 
-    return f"""
-You are an expert travel guide.
+    trip = dashboard["trip"]
+    analytics = dashboard["analytics"]
+    forex = dashboard["forex"]
 
-Destination:
-{destination}
+    places_text = ""
 
-Recommend EXACTLY 5 authentic local eateries that are popular with locals and tourists.
+    for i, place in enumerate(places, start=1):
 
-For EVERY recommendation use EXACTLY this format:
+        places_text += f"""
+{i}.
 
-### 🍜 <Restaurant Name>
+Name: {place["name"]}
 
-**Budget:** 🟢 Budget / 🟡 Moderate / 🔴 Premium
+Address: {place["address"]}
 
-**Approx Cost:**
-<Cost per person in local currency>
+Rating: {place["rating"]}
 
-**Famous For:**
-<One short line>
+Total Reviews: {place["total_ratings"]}
 
----
+Google Maps:
+{place["maps_url"]}
 
-Rules:
-
-• Recommend ONLY authentic local places.
-• Avoid international fast-food chains.
-• Keep every recommendation under 3 lines.
-• No introduction.
-• No conclusion.
-• No extra explanation.
-• Return ONLY the recommendations.
 """
 
-
-def build_tourist_attractions_prompt(destination: str) -> str:
-    """
-    Prompt for recommending tourist attractions.
-    """
-
     return f"""
-You are an expert travel guide.
+You are an AI Travel Assistant.
+
+Your task is to recommend the BEST nearby {category} for the traveler.
+
+================================================
+TRIP INFORMATION
+================================================
+
+Home Country:
+{trip["home_country"]}
 
 Destination:
-{destination}
+{trip["destination_country"]}
 
-Recommend EXACTLY 5 tourist attractions.
+Home Currency:
+{trip["home_currency"]}
 
-Include:
-• Famous attractions
-• Hidden gems
+Destination Currency:
+{trip["destination_currency"]}
 
-For EVERY recommendation use EXACTLY this format:
+Remaining Budget:
+{analytics["remaining_budget"]}
 
-### 🏛 <Attraction Name>
+Daily Allowance:
+{analytics["daily_allowance"]}
 
-**Budget:** 🟢 Free / 🟡 Moderate / 🔴 Premium
+Current Forex:
+1 {trip["home_currency"]} =
+{forex["live_rate"]["exchange_rate"]}
+{trip["destination_currency"]}
 
-**Approx Entry Fee:**
-<Entry fee in local currency or Free>
+================================================
+NEARBY PLACES
+================================================
 
-**Why Visit:**
-<One short line>
+{places_text}
 
----
+================================================
+YOUR TASK
+================================================
 
-Rules:
+Recommend the BEST 5 options.
 
-• Keep every recommendation under 3 lines.
-• No introduction.
-• No conclusion.
-• No extra explanation.
-• Return ONLY the recommendations.
+While recommending, consider:
+
+• User's remaining budget
+
+• Daily allowance
+
+• Ratings
+
+• Number of reviews
+
+• Practicality for travelers
+
+• Value for money
+
+For every recommendation include:
+
+• Name
+
+• Why you recommend it
+
+• Whether it appears Budget / Moderate / Premium
+
+• Mention if it has excellent ratings
+
+Keep the response concise.
+
+Return Markdown.
 """

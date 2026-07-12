@@ -18,6 +18,13 @@ from utils.constants import PRE_TRIP, TRAVEL
 from services.database_service import DatabaseService
 from services.currency_service import CurrencyService
 
+from services.google_places_service import GooglePlacesService
+from services.llm_service import LLMService
+
+from prompts.finance_prompt import (
+    build_nearby_recommendation_prompt,
+)
+
 from utils.calculations import (
     calculate_travel_budget,
     calculate_remaining_budget,
@@ -30,8 +37,14 @@ from utils.calculations import (
 class TravelService:
 
     def __init__(self):
+
         self.db = DatabaseService()
+
         self.currency_service = CurrencyService()
+
+        self.google_places_service = GooglePlacesService()
+
+        self.llm_service = LLMService()
 
     # ======================================================
     # Trip Management
@@ -398,3 +411,77 @@ class TravelService:
         "30_day": trend_30,
     }
 }
+    
+        # ======================================================
+    # Nearby Recommendations
+    # ======================================================
+
+    def get_nearby_recommendations(
+        self,
+        trip_id,
+        city,
+        category,
+    ):
+        """
+        Get nearby places from Google Places and let Gemini
+        recommend the best options based on travel budget.
+        """
+
+        dashboard = self.get_dashboard_data(trip_id)
+
+        # ----------------------------------------------
+        # Google Places Search
+        # ----------------------------------------------
+
+        if category == "restaurant":
+
+            places = self.google_places_service.search_budget_restaurants(
+                city
+            )
+
+        elif category == "atm":
+
+            places = self.google_places_service.search_atms(
+                city
+            )
+
+        elif category == "currency_exchange":
+
+            places = self.google_places_service.search_currency_exchange(
+                city
+            )
+
+        elif category == "convenience_store":
+
+            places = self.google_places_service.search_convenience_stores(
+                city
+            )
+
+        else:
+
+            return "Invalid category."
+
+        if not places:
+
+            return (
+                f"No nearby {category.replace('_', ' ')} "
+                f"were found."
+            )
+
+        # ----------------------------------------------
+        # Build Prompt
+        # ----------------------------------------------
+
+        prompt = build_nearby_recommendation_prompt(
+            dashboard=dashboard,
+            places=places,
+            category=category.replace("_", " "),
+        )
+
+        # ----------------------------------------------
+        # Gemini Recommendation
+        # ----------------------------------------------
+
+        return self.llm_service.generate_response(
+            prompt
+        )

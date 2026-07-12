@@ -9,13 +9,12 @@ from services.llm_service import LLMService
 from prompts.finance_prompt import (
     build_dashboard_prompt,
     build_chat_prompt,
-    build_local_eateries_prompt,
-    build_tourist_attractions_prompt,
+    build_nearby_recommendation_prompt,
 )
 
 from utils.constants import (
     SUPPORTED_COUNTRIES,
-    EXPENSE_CATEGORIES,
+    EXPENSE_CATEGORIES, CURRENCY_NAMES,
     EXPENSE_TYPES,PRE_TRIP, TRAVEL, PRE_TRIP_CATEGORIES, TRAVEL_CATEGORIES
 )
 
@@ -24,8 +23,8 @@ from utils.constants import (
 # ==========================================================
 
 st.set_page_config(
-    page_title="Travel Finance Agent",
-    page_icon="✈️",
+    page_title="Currency & Expense Travel Agent",
+    page_icon="🌍",
     layout="wide",
 )
 
@@ -46,6 +45,9 @@ if "trip_id" not in st.session_state:
 if "dashboard_ai" not in st.session_state:
     st.session_state.dashboard_ai = None
 
+if "show_create_trip_form" not in st.session_state:
+    st.session_state.show_create_trip_form = False
+
 if "currency_view" not in st.session_state:
     st.session_state.currency_view = "INR"
 
@@ -53,8 +55,19 @@ if "eateries_result" not in st.session_state:
     st.session_state.eateries_result = None
 
 if "tourist_result" not in st.session_state:
-    st.session_state.tourist_result = None   
+    st.session_state.tourist_result = None  
 
+if "nearby_results" not in st.session_state:
+    st.session_state.nearby_results = None
+
+if "selected_category" not in st.session_state:
+    st.session_state.selected_category = None
+
+if "manual_city" not in st.session_state:
+    st.session_state.manual_city = ""
+
+if "location_mode" not in st.session_state:
+    st.session_state.location_mode = "Enter Manually"
 
 # ==========================================================
 # Sidebar
@@ -62,7 +75,7 @@ if "tourist_result" not in st.session_state:
 
 with st.sidebar:
 
-    st.title("✈️ Travel Finance Agent")
+    st.title("🌍 Currency & Expense\nTravel Agent")
 
     st.markdown("---")
 
@@ -75,8 +88,23 @@ with st.sidebar:
         st.subheader("Current Trip")
 
         st.write(f"📍 {trip['destination_country']}")
-        st.write(f"🏠 {trip['home_country']} ({trip['home_currency']})")
-        st.write(f"✈️ {trip['destination_country']} ({trip['destination_currency']})")
+        st.write(
+           f"🏠 **Home Country**\n\n"
+           f"{trip['home_country']}"
+        )
+
+        st.caption(
+         f"{CURRENCY_NAMES[trip['home_currency']]} ({trip['home_currency']})"
+        )
+
+        st.write(
+         f"✈️ **Destination Country**\n\n"
+         f"{trip['destination_country']}"
+      )
+
+        st.caption(
+          f"{CURRENCY_NAMES[trip['destination_currency']]} ({trip['destination_currency']})"
+    )
         st.write(
             f"🗓️ {trip['start_date']} → {trip['end_date']}"
         )
@@ -84,16 +112,21 @@ with st.sidebar:
         st.markdown("---")
 
     page = st.radio(
-        "Navigation",
-        [
-            "Dashboard",
-            "Expenses",
-            "Forex Center",
-            "Ask AI",
-        ]
-    )
+    "Navigation",
+    [
+        "📊 Dashboard",
+        "💳 Expenses",
+        "💱 Currency Exchange",
+        "🌍 Smart Travel Assistant",
+    ]
+)
 
-st.title("Travel Finance Agent")
+
+
+st.title("🌍 Currency & Expense Travel Agent")
+st.caption(
+    "AI-powered travel budgeting, expense tracking, currency exchange insights, and smart destination assistance."
+)
 
 # ==========================================================
 # Dashboard
@@ -101,15 +134,48 @@ st.title("Travel Finance Agent")
 
 def show_dashboard():
 
-    st.header("Dashboard")
-
     # ------------------------------------------------------
     # No Trip Created
     # ------------------------------------------------------
 
     if st.session_state.trip_id is None:
 
-        st.info("Create a trip to get started.")
+        with st.container(border=True):
+
+          st.subheader("🌍 Welcome to Currency & Expense Travel Agent")
+
+          st.markdown(
+          """
+          Plan smarter. Spend wiser. Travel confidently.
+
+          This AI-powered assistant helps you:
+
+          ✅ Plan your travel budget
+
+          ✅ Track expenses 
+
+          ✅ Monitor live currency exchange rates
+
+          ✅ Discover nearby budget-friendly restaurants, ATMs, currency exchange centres and convenience stores
+
+          ✅ Get personalized AI travel recommendations
+
+         👇 **Start by creating your trip below.**
+        """
+       )
+        if st.button(
+       "🚀 Get Started",
+        use_container_width=True,
+        ):
+         st.session_state.show_create_trip_form = True
+         st.rerun()
+
+        if not st.session_state.show_create_trip_form:
+         return
+
+        st.markdown("")
+
+        st.subheader("✈️ Create Your Trip")
 
         with st.form("create_trip_form"):
 
@@ -141,7 +207,9 @@ def show_dashboard():
 
                 total_budget = st.number_input(
                     "Total Budget",
-                    min_value=0.0,
+                    min_value=None,
+                    value=None,
+                    placeholder="Enter Total Budget",
                     step=1000.0,)
                  
                 if home_currency:
@@ -200,6 +268,9 @@ def show_dashboard():
                         )
 
                     st.session_state.trip_id = trip_id
+
+                    # Hide the create trip form
+                    st.session_state.show_create_trip_form = False
 
                     # Reset Explore Cache for new trip
                     st.session_state.eateries_result = None
@@ -540,7 +611,6 @@ def show_dashboard():
 
 def show_expenses():
 
-    st.header("Expenses")
 
     if st.session_state.trip_id is None:
 
@@ -605,7 +675,9 @@ def show_expenses():
 
             amount = st.number_input(
                 f"Amount ({currency})",
-                min_value=0.0,
+                min_value=None,
+                value=None,
+                placeholder="Enter Amount",
                 step=100.0,
             )
 
@@ -700,65 +772,54 @@ def show_expenses():
        st.info("No expenses added yet.")
 
 
-    # ======================================================
-# Recent Transactions
-# ======================================================
-
     st.markdown("---")
 
-    st.subheader("Recent Transactions")
+    st.subheader("🗑️ Manage Expenses")
 
     if expenses:
 
-       recent = expenses[:3]
+        for expense in expenses:
 
-       for expense in recent:
-
-            col1, col2, col3 = st.columns([3, 2, 1])
+            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
 
             with col1:
-
-              st.write(
-                f"**{expense['category']}** "
-                f"({expense['expense_type']})"
-             )
-
-              st.caption(
-                f"{expense['date']} • {expense['notes']}"
-             )
-
-            with col2:
-
-              st.metric(
-                expense["currency"],
-                f"{expense['amount']:,.2f}"
-              )
-
-            with col3:
-
-              if st.button(
-                "🗑️",
-                key=f"delete_{expense['expense_id']}",
-            ):
-
-                travel_service.db.delete_expense(
-                    expense["expense_id"]
+                st.write(f"**{expense['category']}**")
+                st.caption(
+                    f"{expense['expense_type']} • {expense['date']}"
                 )
 
-                st.success("Expense deleted.")
+            with col2:
+                st.write(
+                    f"{expense['currency']} {expense['amount']:,.2f}"
+                )
 
-                st.rerun()
+            with col3:
+                st.write(expense["notes"])
+
+            with col4:
+
+                if st.button(
+                    "🗑️ Delete",
+                    key=f"delete_{expense['expense_id']}",
+                    use_container_width=True,
+                ):
+
+                    travel_service.db.delete_expense(
+                        expense["expense_id"]
+                    )
+
+                    st.success("Expense deleted successfully.")
+
+                    st.rerun()
 
     else:
 
-        st.info("No recent transactions.")   
+        st.info("No expenses available.")
     # ==========================================================
 # Forex Center
 # ==========================================================
 
 def show_forex():
-
-    st.header("📈 Forex Center")
 
     if st.session_state.trip_id is None:
 
@@ -777,7 +838,7 @@ def show_forex():
     # Live Exchange Rate
     # ======================================================
 
-    st.subheader("Live Exchange Rate")
+    st.subheader("💱 Live Exchange Rate")
 
     st.metric(
          f"1 {trip['home_currency']}",
@@ -854,7 +915,7 @@ def show_forex():
     # Forex Insight
     # ======================================================
 
-    st.subheader("Forex Insight")
+    st.subheader("💡 Currency Exchange Insight")
 
     if trend7["current_rate"] < trend7["moving_average"]:
 
@@ -884,7 +945,9 @@ def show_forex():
 
     amount = st.number_input(
         f"Amount ({trip['home_currency']})",
-        min_value=0.0,
+        min_value=None,
+        value=None,
+        placeholder="Enter Amount",
         step=100.0,
     )
 
@@ -894,20 +957,17 @@ def show_forex():
          f"Equivalent {trip['destination_currency']}",
          f"{converted:,.2f} {trip['destination_currency']}"
 )   
-# ==========================================================
-# Explore & Ask AI
-# ==========================================================
 
 # ==========================================================
-# Explore & Ask AI
+# Smart Travel Assistant
 # ==========================================================
 
-def show_ai():
+def show_smart_travel_assistant():
 
-    st.header("✨ Explore Your Destination")
+    st.header("🌍 Smart Travel Assistant")
 
     st.caption(
-        "Smart recommendations tailored for your destination."
+        "Discover nearby places based on your budget, forex rates and destination."
     )
 
     if st.session_state.trip_id is None:
@@ -920,101 +980,210 @@ def show_ai():
     # Dashboard Data
     # ------------------------------------------------------
 
-    summary = travel_service.get_trip_summary(
-    st.session_state.trip_id
+    dashboard = travel_service.get_dashboard_data(
+        st.session_state.trip_id
     )
 
-    trip = summary["trip"]
-
-    analytics = summary["analytics"]
+    trip = dashboard["trip"]
 
     # ======================================================
-    # Local Eateries
+    # Location
     # ======================================================
 
-    with st.expander(
-        "🍜 **Local Eateries**\n\nDiscover authentic local flavours",
-        expanded=False
-    ):
+    st.subheader("📍 Location")
 
-        if st.session_state.eateries_result is None:
+    location_mode = st.radio(
+        "Choose Location",
+        [
+            "Enter Manually",
+            "Use Current Location"
+        ],
+        horizontal=True,
+        key="location_mode",
+    )
 
-            with st.spinner(
-                "Finding authentic local eateries..."
-            ):
+    if location_mode == "Enter Manually":
 
-                prompt = build_local_eateries_prompt(
-                    trip["destination_country"]
-                )
-
-                st.session_state.eateries_result = (
-                    llm_service.generate_response(prompt)
-                )
-
-        st.markdown(
-            st.session_state.eateries_result
+        city = st.text_input(
+            "City / Town",
+            value=st.session_state.manual_city,
+            placeholder="Example: Tokyo"
         )
 
-    # ======================================================
-    # Tourist Attractions
-    # ======================================================
+        st.session_state.manual_city = city
 
-    with st.expander(
-        "🏛 **Tourist Attractions**\n\nDiscover iconic attractions & hidden gems",
-        expanded=False
-    ):
+    else:
 
-        if st.session_state.tourist_result is None:
-
-            with st.spinner(
-                "Finding popular attractions..."
-            ):
-
-                prompt = build_tourist_attractions_prompt(
-                    trip["destination_country"]
-                )
-
-                st.session_state.tourist_result = (
-                    llm_service.generate_response(prompt)
-                )
-
-        st.markdown(
-            st.session_state.tourist_result
+        st.info(
+            "📍 Current location support will automatically detect your location."
         )
 
+        city = None
+
+    st.markdown("---")
+
+    # ======================================================
+    # Nearby Explorer
+    # ======================================================
+
+    st.subheader("🔍 Nearby Explorer")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        restaurant_btn = st.button(
+            "🍜 Budget Restaurants",
+            use_container_width=True,
+        )
+
+        exchange_btn = st.button(
+            "💱 Currency Exchange",
+            use_container_width=True,
+        )
+
+    with col2:
+
+        atm_btn = st.button(
+            "🏧 ATM",
+            use_container_width=True,
+        )
+
+        store_btn = st.button(
+            "🛒 Convenience Store",
+            use_container_width=True,
+        )
+
+    st.markdown("---")
+
+    st.subheader("🤖 AI Recommendations")
+
+
+    if restaurant_btn:
+
+        if not city:
+
+            st.warning("Please enter a city.")
+
+        else:
+
+            with st.spinner("Finding budget restaurants..."):
+
+                st.session_state.selected_category = "restaurant"
+
+                st.session_state.nearby_results = (
+                    travel_service.get_nearby_recommendations(
+                        trip_id=st.session_state.trip_id,
+                        city=city,
+                        category="restaurant",
+                    )
+                )
+
+    elif atm_btn:
+
+        if not city:
+
+            st.warning("Please enter a city.")
+
+        else:
+
+            with st.spinner("Finding nearby ATMs..."):
+
+                st.session_state.selected_category = "atm"
+
+                st.session_state.nearby_results = (
+                    travel_service.get_nearby_recommendations(
+                        trip_id=st.session_state.trip_id,
+                        city=city,
+                        category="atm",
+                    )
+                )
+
+    elif exchange_btn:
+
+        if not city:
+
+            st.warning("Please enter a city.")
+
+        else:
+
+            with st.spinner("Finding currency exchange..."):
+
+                st.session_state.selected_category = "currency_exchange"
+
+                st.session_state.nearby_results = (
+                    travel_service.get_nearby_recommendations(
+                        trip_id=st.session_state.trip_id,
+                        city=city,
+                        category="currency_exchange",
+                    )
+                )
+
+    elif store_btn:
+
+        if not city:
+
+            st.warning("Please enter a city.")
+
+        else:
+
+            with st.spinner("Finding convenience stores..."):
+
+                st.session_state.selected_category = "convenience_store"
+
+                st.session_state.nearby_results = (
+                    travel_service.get_nearby_recommendations(
+                        trip_id=st.session_state.trip_id,
+                        city=city,
+                        category="convenience_store",
+                    )
+                )
+
+    if st.session_state.nearby_results:
+
+            st.markdown(
+            st.session_state.nearby_results
+        )
+            
     st.markdown("---")
 
     # ======================================================
     # Ask AI
     # ======================================================
-    st.subheader("🤖 Ask AI")
+
+    st.subheader("🤖 SMART TRAVEL ASSISTANT")
+
+    st.caption(
+        "Ask anything about your trip, budget, forex, or destination."
+    )
 
     user_query = st.text_area(
-        "Ask anything about your trip",
+        "Your Question",
         height=120,
-        placeholder="Example: Can I afford a day trip to Mount Fuji?",
-        key="user_ai_query"
+        placeholder="Example: Can I afford shopping in Shibuya today?",
+        key="user_ai_query",
     )
 
     if st.button(
         "Get AI Advice",
-        use_container_width=True
+        use_container_width=True,
     ):
 
         if not user_query.strip():
 
-            st.warning(
-                "Please enter your question."
-            )
+            st.warning("Please enter a question.")
 
         else:
 
-            with st.spinner(
-                "Analyzing your trip..."
-            ):
+            with st.spinner("Thinking..."):
 
-                prompt = build_chat_prompt(summary,
-                    user_query
+                summary = travel_service.get_trip_summary(
+                    st.session_state.trip_id
+                )
+
+                prompt = build_chat_prompt(
+                    summary,
+                    user_query,
                 )
 
                 response = llm_service.generate_response(
@@ -1023,27 +1192,28 @@ def show_ai():
 
             st.markdown("---")
 
-            st.subheader("💡 AI Travel Advice")
+            st.subheader("💡 AI Response")
 
             with st.container(border=True):
 
                 st.markdown(response)
+
 # ==========================================================
 # Navigation
 # ==========================================================
 
-if page == "Dashboard":
+if page == "📊 Dashboard":
 
     show_dashboard()
 
-elif page == "Expenses":
+elif page == "💳 Expenses":
 
     show_expenses()
 
-elif page == "Forex Center":
+elif page == "💱 Currency Exchange":
 
     show_forex()
 
-elif page == "Ask AI":
+elif page == "🌍 Smart Travel Assistant":
 
-    show_ai()
+    show_smart_travel_assistant()
