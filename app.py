@@ -75,7 +75,7 @@ if "location_mode" not in st.session_state:
 
 with st.sidebar:
 
-    st.title("🌍 Currency & Expense\nTravel Agent")
+    st.title("🌍 Currency & Expense Travel Agent")
 
     st.markdown("---")
 
