@@ -185,8 +185,6 @@ For EACH place use EXACTLY this format:
 
 ### Place Name
 
-💰 Budget: Budget / Moderate / Premium
-
 ⭐ Rating: X.X (if available)
 
 ================================================
