@@ -144,36 +144,22 @@ Google Maps:
 """
 
     return f"""
-You are an AI Travel Assistant.
+You are a Smart Travel Finance Assistant.
 
-Your task is to recommend the BEST nearby {category} for the traveler.
+Your job is to recommend ONLY the best nearby {category} that match the traveler's budget.
 
 ================================================
 TRIP INFORMATION
 ================================================
 
-Home Country:
-{trip["home_country"]}
+Destination: {trip["destination_country"]}
 
-Destination:
-{trip["destination_country"]}
+Remaining Budget: {analytics["remaining_budget"]} {trip["home_currency"]}
 
-Home Currency:
-{trip["home_currency"]}
+Today's Safe Spending: {analytics["daily_allowance"]} {trip["home_currency"]}
 
-Destination Currency:
-{trip["destination_currency"]}
-
-Remaining Budget:
-{analytics["remaining_budget"]}
-
-Daily Allowance:
-{analytics["daily_allowance"]}
-
-Current Forex:
-1 {trip["home_currency"]} =
-{forex["live_rate"]["exchange_rate"]}
-{trip["destination_currency"]}
+Exchange Rate:
+1 {trip["home_currency"]} = {forex["live_rate"]["exchange_rate"]} {trip["destination_currency"]}
 
 ================================================
 NEARBY PLACES
@@ -185,33 +171,49 @@ NEARBY PLACES
 YOUR TASK
 ================================================
 
-Recommend the BEST 5 options.
+Select ONLY the best 5 places.
 
-While recommending, consider:
-
-• User's remaining budget
-
-• Daily allowance
-
-• Ratings
-
-• Number of reviews
-
-• Practicality for travelers
-
+Prioritize:
+• Budget friendliness
+• High ratings
+• Good number of reviews
 • Value for money
+• Suitable for travelers
+• Fits the user's remaining budget
 
-For every recommendation include:
+For EACH place use EXACTLY this format:
 
-• Name
+### Place Name
 
-• Why you recommend it
+💰 Budget: Budget / Moderate / Premium
 
-• Whether it appears Budget / Moderate / Premium
+⭐ Rating: X.X (if available)
 
-• Mention if it has excellent ratings
+✅ Why: Maximum ONE short sentence.
 
-Keep the response concise.
+💡 Budget Fit: Fits today's budget / Slightly expensive / Premium choice.
 
-Return Markdown.
+================================================
+RULES
+================================================
+
+• Maximum 5 recommendations.
+
+• Maximum 1 sentence for "Why".
+
+• Maximum 1 sentence for "Budget Fit".
+
+• NO introductions.
+
+• NO conclusions.
+
+• NO travel history.
+
+• NO long explanations.
+
+• NO paragraphs.
+
+• Keep the ENTIRE response under 150 words.
+
+Return clean Markdown only.
 """
