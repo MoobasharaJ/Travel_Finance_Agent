@@ -935,28 +935,7 @@ def show_forex():
             "you may consider waiting."
         )
 
-    st.markdown("---")
-
-    # ======================================================
-    # Currency Converter
-    # ======================================================
-
-    st.subheader("Currency Converter")
-
-    amount = st.number_input(
-        f"Amount ({trip['home_currency']})",
-        min_value=None,
-        value=None,
-        placeholder="Enter Amount",
-        step=100.0,
-    )
-
-    converted = amount * forex["live_rate"]["exchange_rate"]
-
-    st.metric(
-         f"Equivalent {trip['destination_currency']}",
-         f"{converted:,.2f} {trip['destination_currency']}"
-)   
+    st.markdown("---")   
 
 # ==========================================================
 # Smart Travel Assistant
